@@ -1,14 +1,14 @@
 import express from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../lib/prisma.js';
 import { authenticateToken } from '../middleware/auth.js';
+import { validate, registerSchema, loginSchema, addBalanceSchema } from '../lib/validations.js';
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // Register
-router.post('/register', async (req, res) => {
+router.post('/register', validate(registerSchema), async (req, res) => {
   try {
     const { username, email, password } = req.body;
 
@@ -59,7 +59,7 @@ router.post('/register', async (req, res) => {
 });
 
 // Login
-router.post('/login', async (req, res) => {
+router.post('/login', validate(loginSchema), async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -128,13 +128,9 @@ router.get('/me', authenticateToken, async (req, res) => {
 });
 
 // Add balance (for testing/demo purposes)
-router.post('/add-balance', authenticateToken, async (req, res) => {
+router.post('/add-balance', authenticateToken, validate(addBalanceSchema), async (req, res) => {
   try {
     const { amount } = req.body;
-
-    if (!amount || amount <= 0) {
-      return res.status(400).json({ error: '请输入有效金额' });
-    }
 
     const user = await prisma.user.update({
       where: { id: req.user.id },

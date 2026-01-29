@@ -1,5 +1,5 @@
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../lib/prisma.js';
 import { authenticateToken } from '../middleware/auth.js';
 import multer from 'multer';
 import fs from 'fs';
@@ -10,7 +10,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // MiniMax API Configuration
 const MINIMAX_API_KEY = process.env.MINIMAX_API_KEY;

@@ -23,13 +23,15 @@
     "cors": "^2.8.6",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
+    "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
     "mammoth": "^1.11.0",
     "multer": "^2.0.2",
     "pdf-parse": "^1.1.1",
     "pdfjs-dist": "^4.8.69",
     "sharp": "^0.34.5",
-    "vite": "^5.4.21"
+    "vite": "^5.4.21",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "nodemon": "^3.1.11",

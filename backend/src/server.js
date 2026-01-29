@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -13,6 +14,7 @@ import publicRoutes from './routes/public.js';
 import twitterRoutes from './routes/twitter.js';
 import translateRoutes from './routes/translate.js';
 import voiceRoutes from './routes/voice.js';
+import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 
 dotenv.config();
 
@@ -28,6 +30,13 @@ const corsOptions = {
   credentials: true,
 };
 app.use(cors(corsOptions));
+
+// Security headers
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' }, // Allow static files to be loaded
+  contentSecurityPolicy: false, // Disable CSP for now (frontend handles it)
+}));
+
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
@@ -50,6 +59,10 @@ app.use('/api/voice', voiceRoutes);
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', message: 'Server is running' });
 });
+
+// Error handling - must be after all routes
+app.use(notFoundHandler);
+app.use(errorHandler);
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
