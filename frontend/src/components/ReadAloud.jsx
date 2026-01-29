@@ -4,15 +4,45 @@ import VoiceRecorder from './VoiceRecorder';
 
 // 将 HTML 内容按句子拆分
 export function splitIntoSentences(html) {
+  if (!html || typeof html !== 'string') {
+    return [];
+  }
+
   const div = document.createElement('div');
   div.innerHTML = html;
-  const text = div.textContent || div.innerText || '';
+  let text = div.textContent || div.innerText || '';
 
-  // 按中英文句号、问号、感叹号分割，保留分隔符
+  if (!text.trim()) {
+    return [];
+  }
+
+  // 预处理：统一换行符为空格，合并多个空格
+  text = text.replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim();
+
+  if (!text) {
+    return [];
+  }
+
+  // 按中英文句号、问号、感叹号、分号分割，保留分隔符
+  // 添加更多分隔符：分号、冒号、换行（段落分割）
   const sentences = text
-    .split(/(?<=[。！？.!?])/g)
+    .split(/(?<=[。！？.!?;；:：\n])\s*/g)
     .map(s => s.trim())
     .filter(s => s.length > 0);
+
+  // 如果分割结果太少（少于3个句子），可能是纯英文或特殊格式
+  // 尝试用换行符再次分割
+  if (sentences.length < 3) {
+    const lines = text.split(/\n+/g).map(s => s.trim()).filter(s => s.length > 0);
+    if (lines.length > sentences.length) {
+      return lines;
+    }
+  }
+
+  // 如果还是没有句子，返回整个文本作为一个句子
+  if (sentences.length === 0) {
+    return [text];
+  }
 
   return sentences;
 }

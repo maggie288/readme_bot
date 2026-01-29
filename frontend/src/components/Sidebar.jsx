@@ -23,9 +23,9 @@ export default function Sidebar({
   };
 
   return (
-    <div className="fixed right-0 top-20 h-[calc(100vh-5rem)] flex">
+    <div className="relative">
       {/* Button Column */}
-      <div className="bg-gray-50 border-l border-gray-200 p-2 flex flex-col gap-2">
+      <div className="fixed right-0 top-20 bg-gray-50 border-l border-gray-200 p-2 flex flex-col gap-2 z-30">
         <button
           onClick={() => togglePanel('toc')}
           className={`p-3 rounded-lg transition-colors ${
@@ -123,9 +123,9 @@ export default function Sidebar({
         </button>
       </div>
 
-      {/* Expandable Panel */}
+      {/* Expandable Panel - 绝对定位覆盖层，不挤压正文 */}
       {activePanel && (
-        <div className="w-80 bg-white border-l border-gray-200 shadow-lg overflow-y-auto">
+        <div className="fixed right-14 top-20 bottom-4 w-80 bg-white border-l border-gray-200 shadow-lg overflow-y-auto z-20 rounded-l-lg">
           <div className="p-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-800">
