@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { documentsAPI, bookshelfAPI, translateAPI } from '../services/api';
-import DocumentEditor from '../components/DocumentEditor';
+import DocumentEditor, { EditorToolbar } from '../components/DocumentEditor';
 import Sidebar from '../components/Sidebar';
 import PDFViewer from '../components/PDFViewer';
 
@@ -29,7 +29,7 @@ export default function DocumentPage() {
   const [loadingTranslation, setLoadingTranslation] = useState(false);
 
   // 视图切换状态
-  const [viewMode, setViewMode] = useState('text'); // 'text' | 'pdf'
+  const [viewMode, setViewMode] = useState('text'); // 'text' | 'original'
 
   // 朗读状态管理
   const [isReading, setIsReading] = useState(false);
@@ -45,6 +45,9 @@ export default function DocumentPage() {
   const autoSaveTimerRef = useRef(null);
   const lastSavedContentRef = useRef('');
   const lastSavedTitleRef = useRef('');
+
+  // 编辑器实例（用于外部工具栏）
+  const [editor, setEditor] = useState(null);
 
   useEffect(() => {
     loadDocument();
@@ -335,9 +338,11 @@ export default function DocumentPage() {
 
   const isOwner = document?.author?.id === user?.id;
   const hasPdfPages = document?.pdfPages && document.pdfPages.length > 0;
-  const hasAccess = document?.hasAccess !== false; // 默认有访问权限
+  const hasAccess = document?.hasAccess !== false;
   const needPurchase = document?.needPurchase === true;
   const isTwitterSource = document?.sourceType === 'twitter';
+  const isPdfSource = document?.sourceType === 'pdf';
+  const isWordSource = document?.sourceType === 'word';
 
   // 获取当前显示的内容（根据标签切换）
   const displayContent = contentTab === 'translation' && translatedContent
@@ -426,147 +431,166 @@ export default function DocumentPage() {
   return (
     <div className="flex">
       {/* Main Content */}
-      <div className="flex-1 max-w-4xl mx-auto px-6 py-8 mb-20">
-        {/* Title Section */}
-        <div className="mb-6">
-          {isEditing ? (
-            <input
-              type="text"
-              value={editedTitle}
-              onChange={(e) => setEditedTitle(e.target.value)}
-              className="text-3xl font-bold w-full border-b-2 border-gray-300 focus:border-black focus:outline-none pb-2"
-              placeholder="文档标题"
-            />
-          ) : (
-            <h1 className="text-3xl font-bold text-gray-900">
-              {document.title}
-            </h1>
+      <div className="flex-1 max-w-4xl mx-auto px-6 mb-20">
+        {/* 吸顶头部区域 */}
+        <div className="sticky top-0 z-20 bg-white pt-6 pb-4">
+          {/* Title Section */}
+          <div className="mb-3">
+            {isEditing ? (
+              <input
+                type="text"
+                value={editedTitle}
+                onChange={(e) => setEditedTitle(e.target.value)}
+                className="text-2xl font-bold w-full border-b-2 border-gray-300 focus:border-black focus:outline-none pb-2 bg-transparent"
+                placeholder="文档标题"
+              />
+            ) : (
+              <h1 className="text-2xl font-bold text-gray-900">
+                {document.title}
+              </h1>
+            )}
+          </div>
+
+          {/* Metadata & Actions Row */}
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-3 text-sm text-gray-500">
+              <span>{document.author.username}</span>
+              <span className="text-gray-300">·</span>
+              <span>
+                {new Date(document.updatedAt).toLocaleDateString('zh-CN')}
+              </span>
+              {isReading && (
+                <>
+                  <span className="text-gray-300">·</span>
+                  <span className="text-black font-medium flex items-center gap-1">
+                    <span className="animate-pulse text-red-500">●</span>
+                    朗读中
+                  </span>
+                </>
+              )}
+              {readingProgress && readingProgress.listenPercent > 0 && !isReading && (
+                <>
+                  <span className="text-gray-300">·</span>
+                  <span className="text-blue-600">
+                    已听 {readingProgress.listenPercent}%
+                  </span>
+                </>
+              )}
+              {/* 自动保存状态指示器 */}
+              {isEditing && autoSaveStatus && (
+                <>
+                  <span className="text-gray-300">·</span>
+                  <span className={`flex items-center gap-1 ${
+                    autoSaveStatus === 'saving' ? 'text-yellow-600' :
+                    autoSaveStatus === 'saved' ? 'text-green-600' :
+                    autoSaveStatus === 'error' ? 'text-red-600' : ''
+                  }`}>
+                    {autoSaveStatus === 'saving' && (
+                      <>
+                        <svg className="animate-spin h-3 w-3" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        保存中...
+                      </>
+                    )}
+                    {autoSaveStatus === 'saved' && (
+                      <>
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        已保存
+                      </>
+                    )}
+                    {autoSaveStatus === 'error' && (
+                      <>
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        保存失败
+                      </>
+                    )}
+                  </span>
+                </>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleToggleBookshelf}
+                className={`p-2 rounded-lg text-sm transition-colors ${
+                  isInBookshelf
+                    ? 'text-yellow-500 hover:bg-yellow-50'
+                    : 'text-gray-400 hover:bg-gray-100'
+                }`}
+                title={isInBookshelf ? '取消收藏' : '收藏'}
+              >
+                <svg className="w-5 h-5" fill={isInBookshelf ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                </svg>
+              </button>
+
+              {isOwner && (
+                <>
+                  {isEditing && (
+                    <button
+                      onClick={() => setShowSettings(!showSettings)}
+                      className={`p-2 rounded-lg text-sm transition-colors ${
+                        showSettings
+                          ? 'bg-gray-100 text-gray-900'
+                          : 'text-gray-400 hover:bg-gray-100'
+                      }`}
+                      title="设置"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    </button>
+                  )}
+
+                  <button
+                    onClick={handleToggleMode}
+                    disabled={saving}
+                    className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                      isEditing
+                        ? 'bg-green-600 text-white hover:bg-green-700'
+                        : 'bg-gray-900 text-white hover:bg-gray-800'
+                    } disabled:bg-gray-400 disabled:cursor-not-allowed`}
+                  >
+                    {saving
+                      ? '保存中...'
+                      : isEditing
+                      ? '完成编辑'
+                      : '编辑'}
+                  </button>
+
+                  {isEditing && (
+                    <button
+                      onClick={handleDelete}
+                      className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                      title="删除"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* 编辑器工具栏 - 仅编辑模式显示 */}
+          {isEditing && editor && (
+            <div className="border-t border-gray-100">
+              <EditorToolbar editor={editor} />
+            </div>
           )}
-        </div>
 
-        {/* Metadata */}
-        <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
-          <div className="flex items-center gap-4 text-sm text-gray-500">
-            <span>作者: {document.author.username}</span>
-            <span>-</span>
-            <span>
-              更新于 {new Date(document.updatedAt).toLocaleDateString('zh-CN')}
-            </span>
-            {isReading && (
-              <>
-                <span>-</span>
-                <span className="text-black font-medium flex items-center gap-1">
-                  <span className="animate-pulse">●</span>
-                  朗读中
-                </span>
-              </>
-            )}
-            {readingProgress && readingProgress.listenPercent > 0 && !isReading && (
-              <>
-                <span>-</span>
-                <span className="text-blue-600">
-                  已听 {readingProgress.listenPercent}%
-                </span>
-              </>
-            )}
-            {/* 自动保存状态指示器 */}
-            {isEditing && autoSaveStatus && (
-              <>
-                <span>-</span>
-                <span className={`flex items-center gap-1 ${
-                  autoSaveStatus === 'saving' ? 'text-yellow-600' :
-                  autoSaveStatus === 'saved' ? 'text-green-600' :
-                  autoSaveStatus === 'error' ? 'text-red-600' : ''
-                }`}>
-                  {autoSaveStatus === 'saving' && (
-                    <>
-                      <svg className="animate-spin h-3 w-3" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      保存中...
-                    </>
-                  )}
-                  {autoSaveStatus === 'saved' && (
-                    <>
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                      已保存
-                    </>
-                  )}
-                  {autoSaveStatus === 'error' && (
-                    <>
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      保存失败
-                    </>
-                  )}
-                </span>
-              </>
-            )}
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleToggleBookshelf}
-              className={`px-4 py-2 rounded-lg text-sm transition-colors ${
-                isInBookshelf
-                  ? 'bg-black text-white hover:bg-gray-800'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              {isInBookshelf ? '已收藏' : '收藏'}
-            </button>
-
-            {isOwner && (
-              <>
-                {isEditing && (
-                  <button
-                    onClick={() => setShowSettings(!showSettings)}
-                    className={`px-4 py-2 rounded-lg text-sm transition-colors flex items-center gap-1.5 ${
-                      showSettings
-                        ? 'bg-gray-800 text-white'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                    }`}
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    设置
-                  </button>
-                )}
-
-                <button
-                  onClick={handleToggleMode}
-                  disabled={saving}
-                  className={`px-4 py-2 rounded-lg text-sm transition-colors ${
-                    isEditing
-                      ? 'bg-green-600 text-white hover:bg-green-700'
-                      : 'bg-black text-white hover:bg-gray-800'
-                  } disabled:bg-gray-400 disabled:cursor-not-allowed`}
-                >
-                  {saving
-                    ? '保存中...'
-                    : isEditing
-                    ? '保存并切换到阅读'
-                    : '编辑'}
-                </button>
-
-                {isEditing && (
-                  <button
-                    onClick={handleDelete}
-                    className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm"
-                  >
-                    删除
-                  </button>
-                )}
-              </>
-            )}
-          </div>
+          {/* 底部分隔线 */}
+          <div className="border-b border-gray-200"></div>
         </div>
 
         {/* Settings Panel - 仅在编辑模式且作者本人时显示 */}
@@ -761,55 +785,55 @@ export default function DocumentPage() {
           </div>
         )}
 
-        {/* View Mode Tabs - 仅当有 PDF 页面时显示 */}
-        {hasPdfPages && (
-          <div className="flex border-b border-gray-200 mb-6">
-            <button
-              onClick={() => setViewMode('text')}
-              className={`px-4 py-2.5 text-sm font-medium transition-colors relative ${
-                viewMode === 'text'
-                  ? 'text-black'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                文本视图
-              </div>
-              {viewMode === 'text' && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-black"></div>
-              )}
-            </button>
-            <button
-              onClick={() => setViewMode('pdf')}
-              className={`px-4 py-2.5 text-sm font-medium transition-colors relative ${
-                viewMode === 'pdf'
-                  ? 'text-black'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                原始排版
+        {/* View Mode Tabs - 所有文档都显示两种预览模式 */}
+        <div className="flex border-b border-gray-200 mb-6">
+          <button
+            onClick={() => setViewMode('text')}
+            className={`px-4 py-2.5 text-sm font-medium transition-colors relative ${
+              viewMode === 'text'
+                ? 'text-black'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              文字视图
+            </div>
+            {viewMode === 'text' && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-black"></div>
+            )}
+          </button>
+          <button
+            onClick={() => setViewMode('original')}
+            className={`px-4 py-2.5 text-sm font-medium transition-colors relative ${
+              viewMode === 'original'
+                ? 'text-black'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              原始视图
+              {hasPdfPages && (
                 <span className="px-1.5 py-0.5 text-xs bg-gray-100 text-gray-600 rounded">
                   {document.pdfPages.length} 页
                 </span>
-              </div>
-              {viewMode === 'pdf' && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-black"></div>
               )}
-            </button>
-          </div>
-        )}
+            </div>
+            {viewMode === 'original' && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-black"></div>
+            )}
+          </button>
+        </div>
 
         {/* Content Area */}
         {viewMode === 'text' ? (
-          <div className="bg-white rounded-lg p-6">
-            {/* 翻译标签且已购买但无内容的情况已在上方显示loading，这里跳过 */}
+          <div className="bg-white">
+            {/* 文字视图：使用 DocumentEditor 显示富文本内容，保留图片、样式、表格 */}
             {!(isTwitterSource && contentTab === 'translation' && !translationPurchased) && (
               <DocumentEditor
                 content={contentTab === 'translation' && translatedContent ? translatedContent : editedContent}
@@ -819,32 +843,52 @@ export default function DocumentPage() {
                 currentSentenceIndex={currentSentenceIndex}
                 onSentenceClick={handleSentenceClick}
                 readPosition={readingProgress?.listenPosition || 0}
+                onEditorReady={setEditor}
               />
             )}
           </div>
         ) : (
           <div className="bg-white rounded-lg overflow-hidden" style={{ height: 'calc(100vh - 300px)', minHeight: '600px' }}>
-            <PDFViewer pages={document.pdfPages} />
+            {/* 原始视图：根据文档类型显示 */}
+            {hasPdfPages ? (
+              <PDFViewer pages={document.pdfPages} />
+            ) : (
+              /* 没有 PDF 页面的文档，显示只读的富文本编辑器 */
+              <DocumentEditor
+                content={contentTab === 'translation' && translatedContent ? translatedContent : editedContent}
+                editable={false}
+                isReading={isReading}
+                currentSentenceIndex={currentSentenceIndex}
+                onSentenceClick={handleSentenceClick}
+                readPosition={readingProgress?.listenPosition || 0}
+              />
+            )}
           </div>
         )}
 
-        {/* 文本视图说明 */}
-        {hasPdfPages && viewMode === 'text' && (
-          <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <div className="flex items-start gap-3">
-              <svg className="w-5 h-5 text-gray-400 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <div className="text-sm text-gray-600">
-                <p className="font-medium text-gray-700 mb-1">文本视图</p>
-                <p>此视图显示从 PDF 提取的纯文本内容，支持边听边读功能。如需查看原始排版（包含图片、表格等），请切换到"原始排版"标签。</p>
-              </div>
+        {/* 视图说明 */}
+        <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+          <div className="flex items-start gap-3">
+            <svg className="w-5 h-5 text-gray-400 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div className="text-sm text-gray-600">
+              <p className="font-medium text-gray-700 mb-1">
+                {viewMode === 'text' ? '文字视图' : '原始视图'}
+              </p>
+              <p>
+                {viewMode === 'text' 
+                  ? '此视图优化了阅读体验，支持边听边读功能，保留文档的图片、格式和表格。'
+                  : hasPdfPages 
+                    ? '此视图显示文档的原始排版（包含图片、表格等）。'
+                    : '此视图显示文档的原始富文本格式。'}
+              </p>
             </div>
           </div>
-        )}
+        </div>
       </div>
 
-      {/* Right Sidebar - 仅在文本视图显示 */}
+      {/* Right Sidebar - 仅在文字视图显示 */}
       {viewMode === 'text' && (
         <Sidebar
           documentId={parseInt(id)}
