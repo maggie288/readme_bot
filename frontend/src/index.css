@@ -1,0 +1,334 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* TipTap Editor Styles */
+.tiptap {
+  outline: none;
+  min-height: 200px;
+  padding: 1rem;
+}
+
+/* 段落 */
+.tiptap p {
+  margin: 1em 0;
+  line-height: 1.6;
+}
+
+.tiptap p.is-editor-empty:first-child::before {
+  color: #adb5bd;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+/* 标题 */
+.tiptap h1,
+.tiptap h2,
+.tiptap h3,
+.tiptap h4,
+.tiptap h5,
+.tiptap h6 {
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  font-weight: bold;
+  line-height: 1.3;
+}
+
+.tiptap h1 {
+  font-size: 2.25em;
+}
+
+.tiptap h2 {
+  font-size: 1.875em;
+}
+
+.tiptap h3 {
+  font-size: 1.5em;
+}
+
+.tiptap h4 {
+  font-size: 1.25em;
+}
+
+.tiptap h5 {
+  font-size: 1.125em;
+}
+
+.tiptap h6 {
+  font-size: 1em;
+  font-weight: 600;
+}
+
+/* 列表 */
+.tiptap ul,
+.tiptap ol {
+  padding-left: 2em;
+  margin: 1em 0;
+}
+
+.tiptap ul {
+  list-style-type: disc;
+}
+
+.tiptap ol {
+  list-style-type: decimal;
+}
+
+.tiptap ul ul {
+  list-style-type: circle;
+}
+
+.tiptap ul ul ul {
+  list-style-type: square;
+}
+
+.tiptap li {
+  margin: 0.25em 0;
+}
+
+/* 任务列表 */
+.tiptap ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0;
+}
+
+.tiptap ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5em;
+}
+
+.tiptap ul[data-type="taskList"] li > label {
+  flex: 0 0 auto;
+  margin-right: 0.5em;
+  user-select: none;
+}
+
+.tiptap ul[data-type="taskList"] li > div {
+  flex: 1 1 auto;
+}
+
+.tiptap ul[data-type="taskList"] input[type="checkbox"] {
+  cursor: pointer;
+  width: 1em;
+  height: 1em;
+  margin-top: 0.3em;
+}
+
+/* 行内代码 */
+.tiptap code {
+  background-color: #f3f4f6;
+  color: #e83e8c;
+  padding: 0.2em 0.4em;
+  border-radius: 0.25rem;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 0.9em;
+}
+
+/* 代码块 */
+.tiptap pre {
+  background-color: #1f2937;
+  color: #f9fafb;
+  padding: 1em;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  margin: 1em 0;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 0.875em;
+  line-height: 1.5;
+}
+
+.tiptap pre code {
+  background: none;
+  color: inherit;
+  padding: 0;
+  font-size: inherit;
+}
+
+/* 引用 */
+.tiptap blockquote {
+  border-left: 4px solid #3b82f6;
+  padding-left: 1em;
+  margin: 1em 0;
+  color: #6b7280;
+  font-style: italic;
+  background-color: #f9fafb;
+  padding: 0.5em 1em;
+  border-radius: 0.25rem;
+}
+
+/* 分隔线 */
+.tiptap hr {
+  border: none;
+  border-top: 2px solid #e5e7eb;
+  margin: 2em 0;
+}
+
+/* 链接 */
+.tiptap a {
+  color: #3b82f6;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.tiptap a:hover {
+  color: #2563eb;
+}
+
+/* 图片 */
+.tiptap img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  margin: 1em 0;
+  display: block;
+}
+
+/* 表格 */
+.tiptap table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  margin: 1em 0;
+  overflow: hidden;
+}
+
+.tiptap table td,
+.tiptap table th {
+  min-width: 1em;
+  border: 1px solid #d1d5db;
+  padding: 0.5em 0.75em;
+  vertical-align: top;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.tiptap table th {
+  font-weight: bold;
+  text-align: left;
+  background-color: #f3f4f6;
+}
+
+.tiptap table .selectedCell:after {
+  z-index: 2;
+  position: absolute;
+  content: "";
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  background: rgba(59, 130, 246, 0.1);
+  pointer-events: none;
+}
+
+.tiptap table .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: -2px;
+  width: 4px;
+  background-color: #3b82f6;
+  pointer-events: none;
+}
+
+/* 文本格式 */
+.tiptap strong {
+  font-weight: bold;
+}
+
+.tiptap em {
+  font-style: italic;
+}
+
+.tiptap u {
+  text-decoration: underline;
+}
+
+.tiptap s {
+  text-decoration: line-through;
+}
+
+.tiptap mark {
+  background-color: #fef08a;
+  padding: 0.1em 0.2em;
+  border-radius: 0.15rem;
+}
+
+/* 文本对齐 */
+.tiptap [style*="text-align: left"] {
+  text-align: left;
+}
+
+.tiptap [style*="text-align: center"] {
+  text-align: center;
+}
+
+.tiptap [style*="text-align: right"] {
+  text-align: right;
+}
+
+.tiptap [style*="text-align: justify"] {
+  text-align: justify;
+}
+
+/* Prose 增强 */
+.prose {
+  color: #374151;
+  max-width: 65ch;
+}
+
+.prose :where(p):not(:where([class~="not-prose"] *)) {
+  margin-top: 1.25em;
+  margin-bottom: 1.25em;
+}
+
+.prose :where(img):not(:where([class~="not-prose"] *)) {
+  margin-top: 2em;
+  margin-bottom: 2em;
+}
+
+.prose :where(video):not(:where([class~="not-prose"] *)) {
+  margin-top: 2em;
+  margin-bottom: 2em;
+}
+
+.prose :where(figure):not(:where([class~="not-prose"] *)) {
+  margin-top: 2em;
+  margin-bottom: 2em;
+}
+
+/* 响应式 */
+@media (max-width: 640px) {
+  .tiptap {
+    padding: 0.5rem;
+  }
+
+  .tiptap h1 {
+    font-size: 1.75em;
+  }
+
+  .tiptap h2 {
+    font-size: 1.5em;
+  }
+
+  .tiptap table {
+    font-size: 0.875em;
+  }
+}
+
+/* 编辑器聚焦状态 */
+.tiptap:focus {
+  outline: none;
+}
+
+/* 选中文本 */
+.tiptap ::selection {
+  background-color: #bfdbfe;
+}
+
+/* 占位符 */
+.tiptap .ProseMirror-placeholder {
+  color: #9ca3af;
+}

@@ -1,0 +1,30 @@
+{
+  "name": "readme-bot",
+  "version": "1.0.0",
+  "description": "ReadmeBOT - 智能文档阅读助手",
+  "private": true,
+  "scripts": {
+    "start": "./scripts/start.sh",
+    "stop": "./scripts/stop.sh",
+    "restart": "./scripts/restart.sh",
+    "dev": "./scripts/dev.sh",
+    "docker:build": "docker compose build",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f",
+    "docker:clean": "docker compose down -v --rmi local",
+    "install:all": "cd backend && npm install && cd ../frontend && npm install",
+    "backend:dev": "cd backend && npm run dev",
+    "frontend:dev": "cd frontend && npm run dev",
+    "db:migrate": "cd backend && npx prisma migrate dev",
+    "db:studio": "cd backend && npx prisma studio"
+  },
+  "keywords": [
+    "readme",
+    "document",
+    "reader",
+    "tts"
+  ],
+  "author": "",
+  "license": "MIT"
+}

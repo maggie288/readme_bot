@@ -1,0 +1,146 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  email     String   @unique
+  password  String
+  avatar    String?
+  balance   Float    @default(0) // 用户余额
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // 自定义声音字段（MiniMax 声音克隆）
+  customVoiceId        String?   // MiniMax voice ID
+  customVoiceName      String?   // 声音显示名称
+  customVoiceCreatedAt DateTime? // 声音创建时间
+
+  documents            Document[]
+  bookshelf            Bookshelf[]
+  notes                Note[]
+  purchases            Purchase[]            // 用户购买的文档
+  translationPurchases TranslationPurchase[] // 翻译购买记录
+}
+
+model Document {
+  id        Int      @id @default(autoincrement())
+  title     String
+  content   String   @db.Text
+  mode      String   @default("read") // "edit" or "read"
+  pdfPages  Json?    // PDF 页面渲染结果 [{page, url, width, height}]
+  docId     String?  // 文档唯一 ID（用于 PDF 页面存储路径）
+  price     Float    @default(0) // 文档价格，0 表示免费
+  isPublic  Boolean  @default(true) // 是否公开，true=公开，false=私有
+  authorId  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Twitter/外部来源字段
+  sourceType        String?  // 'twitter' | 'pdf' | 'word' | 'notion' | null
+  sourceUrl         String?  // 原始来源 URL
+  originalContent   String?  @db.Text // 原文内容（用于翻译）
+  translatedContent String?  @db.Text // 缓存的翻译内容
+
+  author               User                  @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  chapters             Chapter[]
+  bookshelf            Bookshelf[]
+  notes                Note[]
+  purchases            Purchase[]            // 购买记录
+  translationPurchases TranslationPurchase[] // 翻译购买记录
+}
+
+model Chapter {
+  id           Int      @id @default(autoincrement())
+  documentId   Int
+  title        String
+  order        Int
+  contentStart Int?     // Position in content where chapter starts
+  contentEnd   Int?     // Position in content where chapter ends
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+}
+
+model Bookshelf {
+  id             Int      @id @default(autoincrement())
+  userId         Int
+  documentId     Int
+  addedAt        DateTime @default(now())
+  // 阅读进度
+  readPosition   Int      @default(0)  // 阅读位置（句子索引）
+  listenPosition Int      @default(0)  // 朗读位置（句子索引）
+  readPercent    Int      @default(0)  // 阅读百分比
+  listenPercent  Int      @default(0)  // 朗读百分比
+  speed          Float    @default(1.0) // 语速偏好
+  lastReadAt     DateTime @default(now()) // 最后阅读时间
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, documentId])
+  @@index([userId])
+}
+
+model Note {
+  id         Int      @id @default(autoincrement())
+  documentId Int
+  userId     Int
+  content    String   @db.Text
+  position   Int?     // Position in document where note was made
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+  @@index([userId])
+}
+
+// 购买记录
+model Purchase {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  documentId Int
+  price      Float    // 购买时的价格
+  createdAt  DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, documentId]) // 每个用户只能购买一次同一文档
+  @@index([userId])
+  @@index([documentId])
+}
+
+// 翻译购买记录
+model TranslationPurchase {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  documentId Int
+  price      Float    @default(0.5) // 翻译价格
+  createdAt  DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, documentId]) // 每个用户只能购买一次同一文档的翻译
+  @@index([userId])
+  @@index([documentId])
+}
