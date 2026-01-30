@@ -44,31 +44,16 @@ const upload = multer({
     fileSize: 50 * 1024 * 1024, // 50MB 限制
   },
   fileFilter: (req, file, cb) => {
-    // 解析文件时只允许 PDF 和 Word
-    if (req.path === '/parse') {
-      const allowedTypes = [
-        'application/pdf',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
-        'application/msword', // .doc
-      ];
+    const allowedTypes = [
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
+      'application/msword', // .doc
+    ];
 
-      if (allowedTypes.includes(file.mimetype)) {
-        cb(null, true);
-      } else {
-        cb(new Error('不支持的文件类型。请上传 PDF 或 Word 文档。'));
-      }
-    } 
-    // 图片上传时允许图片类型
-    else if (req.path === '/image') {
-      const imageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
-      if (imageTypes.includes(file.mimetype)) {
-        cb(null, true);
-      } else {
-        cb(new Error('不支持的图片格式。请上传 JPG、PNG、GIF 或 WebP 图片。'));
-      }
-    }
-    else {
+    if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
+    } else {
+      cb(new Error('不支持的文件类型。请上传 PDF 或 Word 文档。'));
     }
   }
 });
@@ -350,32 +335,6 @@ router.post('/parse', authenticateToken, upload.single('file'), async (req, res)
 
     res.status(500).json({
       error: '文件解析失败: ' + (error.message || '未知错误')
-    });
-  }
-});
-
-// 图片上传 API
-router.post('/image', authenticateToken, upload.single('image'), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: '请上传图片' });
-    }
-
-    const imageUrl = `/uploads/${req.file.filename}`;
-
-    res.json({
-      success: true,
-      url: imageUrl
-    });
-  } catch (error) {
-    console.error('Image upload error:', error);
-
-    if (req.file && req.file.path && fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
-    }
-
-    res.status(500).json({
-      error: '图片上传失败: ' + (error.message || '未知错误')
     });
   }
 });

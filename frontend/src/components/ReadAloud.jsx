@@ -16,112 +16,48 @@ export function splitIntoSentences(html) {
     return [];
   }
 
-  console.log('[splitIntoSentences] 原始文本:', {
-    textLength: text.length,
-    textPreview: text.substring(0, 100),
-    textFull: text,
-    timestamp: new Date().toISOString()
-  });
-
   // 预处理：统一换行符为空格，合并多个空格
   text = text.replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim();
 
-  // 按中英文句号、问号、感叹号、逗号分割
-  // 使用正则表达式：找到分割符（包括前面的文本）
-  const sentences = [];
-  let lastIndex = 0;
-  let i = 0;
-  
-  console.log('[splitIntoSentences] 开始分割循环:', {
-    textLength: text.length,
-    textPreview: text,
-    timestamp: new Date().toISOString()
-  });
-  
-  while (i < text.length) {
-    const char = text[i];
-    const isSentenceEnd = /[。！？.!?]/.test(char);
-    const isComma = char === '，' || char === ',';
-    
-    console.log('[splitIntoSentences] 循环中:', {
-      i,
-      char,
-      charCode: char.charCodeAt(0),
-      isSentenceEnd,
-      isComma,
-      lastIndex,
-      sentencesLength: sentences.length,
-      timestamp: new Date().toISOString()
-    });
-    
-    if (isSentenceEnd || isComma) {
-      // 找到分割符，提取前面的文本作为句子
-      const sentence = text.substring(lastIndex, i + 1).trim();
-      
-      // 清理句子末尾的分隔符
-      const cleanedSentence = sentence.replace(/[，,。！？.!?]+$/, '').trim();
-      
-      console.log('[splitIntoSentences] 找到分割符:', {
-        i,
-        char,
-        rawSentence: sentence,
-        cleanedSentence,
-        cleanedLength: cleanedSentence.length,
-        willAdd: cleanedSentence.length > 2,
-        timestamp: new Date().toISOString()
-      });
-      
-      if (cleanedSentence.length > 2) {
-        sentences.push(cleanedSentence);
-        console.log('[splitIntoSentences] 添加句子:', {
-          sentence: cleanedSentence,
-          sentenceLength: cleanedSentence.length,
-          splitBy: isSentenceEnd ? 'sentenceEnd' : 'comma',
-          sentencesNow: sentences.length,
-          timestamp: new Date().toISOString()
-        });
-      }
-      
-      lastIndex = i + 1;
-    }
-    
-    i++;
+  if (!text) {
+    return [];
   }
-  
-  // 添加最后一个句子（从最后一个分割符到文本末尾）
-  const lastSentence = text.substring(lastIndex).trim();
-  
-  console.log('[splitIntoSentences] 处理最后句子:', {
-    lastIndex,
-    lastSentence,
-    lastSentenceLength: lastSentence.length,
-    willAdd: lastSentence.length > 2,
-    sentencesLengthBefore: sentences.length,
-    timestamp: new Date().toISOString()
+
+  // 按中英文句号、问号、感叹号、分号分割，保留分隔符
+  // 添加更多分隔符：分号、冒号、换行（段落分割）
+  let sentences = text
+    .split(/(?<=[。！？.!?;；:：\n])\s*/g)
+    .map(s => s.trim())
+    .filter(s => s.length > 0);
+
+  // 如果分割结果太少（少于3个句子），可能是纯英文或特殊格式
+  // 尝试用换行符再次分割
+  if (sentences.length < 3) {
+    const lines = text.split(/\n+/g).map(s => s.trim()).filter(s => s.length > 0);
+    if (lines.length > sentences.length) {
+      sentences = lines;
+    }
+  }
+
+  // 如果还是没有句子，返回整个文本作为一个句子
+  if (sentences.length === 0) {
+    sentences = [text];
+  }
+
+  // 后处理：确保每个句子都有内容，过滤掉太短的片段
+  // 同时保留原始句子的完整性
+  sentences = sentences.filter(s => {
+    const cleaned = s.replace(/[\s，。！？.!?;；:：]+/g, '').trim();
+    return cleaned.length > 5; // 至少5个字符
   });
-  
-  if (lastSentence.length > 2) {
-    sentences.push(lastSentence);
-    console.log('[splitIntoSentences] 添加最后句子:', {
-      lastSentence,
-      lastSentenceLength: lastSentence.length,
-      sentencesNow: sentences.length,
-      timestamp: new Date().toISOString()
-    });
+
+  // 如果过滤后没有句子，返回原始文本
+  if (sentences.length === 0) {
+    return [text];
   }
 
   console.log('[splitIntoSentences] 解析结果:', {
     sentenceCount: sentences.length,
-    rawTextLength: text.length,
-    rawTextPreview: text.substring(0, 50),
-    rawTextFull: text,
-    allSentences: sentences.map((s, idx) => ({
-      index: idx,
-      text: s,
-      length: s.length,
-      isTruncated: s.length !== text.length,
-      textFull: s  // 完整句子
-    })),
     firstSentences: sentences.slice(0, 3).map(s => s.substring(0, 30)),
     lastSentence: sentences[sentences.length - 1]?.substring(0, 30),
     timestamp: new Date().toISOString()

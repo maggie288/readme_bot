@@ -76,15 +76,6 @@ export const uploadAPI = {
       timeout: 120000, // 2分钟超时，大文件解析可能需要较长时间
     });
   },
-  uploadImage: (file) => {
-    const formData = new FormData();
-    formData.append('image', file);
-    return api.post('/upload/image', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-  },
 };
 
 // Public API (no auth required)
