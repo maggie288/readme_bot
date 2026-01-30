@@ -153,19 +153,6 @@ const MobileReadAloud = forwardRef(function MobileReadAloud({
     }
   }, []);
 
-  // 暴露方法给父组件
-  useImperativeHandle(ref, () => ({
-    handlePlay: () => {
-      handlePlay();
-    },
-    handlePause: () => {
-      handlePause();
-    },
-    handleStop: () => {
-      handleStop();
-    }
-  }), [handlePlay, handlePause, handleStop]);
-
   const speakWithCustomVoice = useCallback(async (index) => {
     if (index >= sentences.length || isCancelledRef.current) {
       setIsPlaying(false);
@@ -380,6 +367,19 @@ const MobileReadAloud = forwardRef(function MobileReadAloud({
       onSentenceChange(-1);
     }
   };
+
+  // 暴露方法给父组件
+  useImperativeHandle(ref, () => ({
+    handlePlay: () => {
+      handlePlay();
+    },
+    handlePause: () => {
+      handlePause();
+    },
+    handleStop: () => {
+      handleStop();
+    }
+  }), [handlePlay, handlePause, handleStop]);
 
   const handleJumpToSentence = useCallback((index) => {
     console.log('[MobileReadAloud] handleJumpToSentence 被调用: index=', index, 'sentences.length=', sentences.length);

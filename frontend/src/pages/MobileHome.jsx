@@ -2,14 +2,17 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { documentsAPI, publicAPI } from '../services/api';
 import MobileHeader from '../components/MobileHeader';
+import MobileImportDocument from '../components/MobileImportDocument';
 
 export default function MobileHome({ user, onLogout }) {
   const navigate = useNavigate();
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState('discover'); // 'discover', 'recent', 'created'
-  
+  const [activeTab, setActiveTab] = useState('discover');
+  const [showAddMenu, setShowAddMenu] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+
   // 发现页面数据
   const [popularDocs, setPopularDocs] = useState([]);
   const [trendingDocs, setTrendingDocs] = useState([]);
@@ -425,7 +428,7 @@ export default function MobileHome({ user, onLogout }) {
             <span className="text-xs mt-1">书架</span>
           </Link>
           <button
-            onClick={handleCreateNew}
+            onClick={() => setShowAddMenu(!showAddMenu)}
             className="flex flex-col items-center px-4 py-2 text-gray-500"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -433,6 +436,51 @@ export default function MobileHome({ user, onLogout }) {
             </svg>
             <span className="text-xs mt-1">新增</span>
           </button>
+
+          {/* 新增菜单 */}
+          {showAddMenu && (
+            <div className="absolute bottom-16 left-1/2 -translate-x-1/2 bg-white rounded-xl shadow-lg border border-gray-200 p-2 z-50 min-w-[140px]">
+              <button
+                onClick={() => {
+                  setShowAddMenu(false);
+                  setShowImportModal(true);
+                }}
+                className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-lg"
+              >
+                <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+                导入文档
+              </button>
+              <button
+                onClick={() => {
+                  setShowAddMenu(false);
+                  handleCreateNew();
+                }}
+                className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-lg"
+              >
+                <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                新建文档
+              </button>
+            </div>
+          )}
+
+          {/* 点击遮罩关闭菜单 */}
+          {showAddMenu && (
+            <div
+              className="fixed inset-0 z-40"
+              onClick={() => setShowAddMenu(false)}
+            />
+          )}
+
+          {/* 导入弹窗 */}
+          <MobileImportDocument
+            isOpen={showImportModal}
+            onClose={() => setShowImportModal(false)}
+            onImportSuccess={loadDocuments}
+          />
           <Link
             to="/m/profile"
             className="flex flex-col items-center px-4 py-2 text-gray-500"
