@@ -28,6 +28,10 @@ model User {
   customVoiceName      String?   // 声音显示名称
   customVoiceCreatedAt DateTime? // 声音创建时间
 
+  // 密码重置字段
+  resetPasswordToken   String?   // 密码重置 token
+  resetPasswordExpires DateTime? // 密码重置 token 过期时间
+
   documents            Document[]
   bookshelf            Bookshelf[]
   notes                Note[]

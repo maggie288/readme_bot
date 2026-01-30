@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Header from './components/Header';
 import Login from './pages/Login';
+import ResetPassword from './pages/ResetPassword';
 import Home from './pages/Home';
 import PublicHome from './pages/PublicHome';
 import DocumentPage from './pages/DocumentPage';
@@ -64,6 +65,11 @@ function App() {
                 <Login onLogin={handleLogin} />
               )
             }
+          />
+
+          <Route
+            path="/reset-password"
+            element={<ResetPassword />}
           />
 
           {/* Public homepage for non-logged in users */}

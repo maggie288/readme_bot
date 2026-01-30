@@ -1,6 +1,7 @@
 import express from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import prisma from '../lib/prisma.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { validate, registerSchema, loginSchema, addBalanceSchema } from '../lib/validations.js';
@@ -99,6 +100,106 @@ router.post('/login', validate(loginSchema), async (req, res) => {
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ error: 'Failed to login' });
+  }
+});
+
+// Forgot Password - 发送密码重置邮件
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: '请输入邮箱地址' });
+    }
+
+    // Find user by email
+    const user = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      // 为了安全，不透露用户是否存在
+      return res.json({ message: '如果该邮箱已注册，我们会发送密码重置链接' });
+    }
+
+    // Generate reset token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetTokenExpires = new Date(Date.now() + 3600000); // 1 hour from now
+
+    // Save reset token to database
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        resetPasswordToken: resetToken,
+        resetPasswordExpires: resetTokenExpires,
+      },
+    });
+
+    // In production, send email with reset link
+    // For now, we'll return the reset link for demo purposes
+    const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}&email=${email}`;
+
+    console.log('\n========================================');
+    console.log('密码重置链接 (Password Reset Link):');
+    console.log(resetLink);
+    console.log('========================================\n');
+
+    res.json({
+      message: '如果该邮箱已注册，我们会发送密码重置链接',
+      // 仅在开发环境返回重置链接
+      ...(process.env.NODE_ENV !== 'production' && { resetLink }),
+    });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({ error: 'Failed to process forgot password request' });
+  }
+});
+
+// Reset Password - 重置密码
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { email, token, newPassword } = req.body;
+
+    if (!email || !token || !newPassword) {
+      return res.status(400).json({ error: '缺少必要参数' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: '密码长度至少为6位' });
+    }
+
+    // Find user with valid reset token
+    const user = await prisma.user.findFirst({
+      where: {
+        email,
+        resetPasswordToken: token,
+        resetPasswordExpires: {
+          gt: new Date(), // Token 还未过期
+        },
+      },
+    });
+
+    if (!user) {
+      return res.status(400).json({ error: '重置链接已过期或无效' });
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update user password and clear reset token
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        resetPasswordToken: null,
+        resetPasswordExpires: null,
+      },
+    });
+
+    res.json({ message: '密码重置成功，请使用新密码登录' });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ error: 'Failed to reset password' });
   }
 });
 
