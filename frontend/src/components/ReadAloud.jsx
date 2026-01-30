@@ -92,15 +92,19 @@ export default function ReadAloud({
   // 使用 ref 存储用户点击的目标句子索引
   const targetSentenceRef = useRef(null);
 
-  // 用于外部触发跳转的状态
-  // const [jumpToTarget, setJumpToTarget] = useState(null);
+  // jumpToTarget 和 setJumpToTarget 从外部传入（props）
 
   // 监听外部跳转目标，触发朗读跳转
   useEffect(() => {
-    if (jumpToTarget !== null && jumpToTarget >= 0 && jumpToTarget < sentences.length) {
-      console.log('[ReadAloud] 检测到外部跳转目标:', jumpToTarget);
-      handleJumpToSentence(jumpToTarget);
-      setJumpToTarget?.(null);  // 清除跳转目标
+    // 如果没有传入 jumpToTarget，不执行任何操作
+    if (jumpToTarget === undefined || jumpToTarget === null) return;
+    if (jumpToTarget < 0 || jumpToTarget >= sentences.length) return;
+
+    console.log('[ReadAloud] 检测到外部跳转目标:', jumpToTarget);
+    handleJumpToSentence(jumpToTarget);
+    // 清除跳转目标
+    if (setJumpToTarget) {
+      setJumpToTarget(null);
     }
   }, [jumpToTarget, sentences.length, handleJumpToSentence, setJumpToTarget]);
 
