@@ -442,85 +442,64 @@ export function EditorToolbar({ editor }) {
 }
 
 // 将HTML内容按句子分割，每个句子包装成可点击的元素
-// 注意：分割逻辑需要与 splitIntoSentences 保持一致
+// 注意：分割逻辑需要与 splitIntoSentences 保持完全一致
 function splitHtmlBySentences(html) {
   if (!html || !html.trim()) return '';
 
   const tempDiv = document.createElement('div');
   tempDiv.innerHTML = html;
 
-  const fragment = document.createDocumentFragment();
+  // 先提取纯文本（与 splitIntoSentences 一致）
+  let text = tempDiv.textContent || tempDiv.innerText || '';
+  text = text.replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim();
 
-  // 句子边界正则：中英文句末符
-  const sentenceEndPattern = /([。！？.!?]+)/g;
+  if (!text) return '';
+
+  // 使用与 splitIntoSentences 完全一致的分割逻辑
+  const sentenceEndPattern = /(?<=[。！？.!?;；:：])\s*/g;
+  let parts = text.split(sentenceEndPattern)
+    .map(s => s.trim())
+    .filter(s => s.length > 0);
+
+  // 如果分割结果太少，尝试用换行符分割
+  if (parts.length < 3) {
+    const lines = text.split(/\n+/g).map(s => s.trim()).filter(s => s.length > 0);
+    if (lines.length > parts.length) {
+      parts = lines;
+    }
+  }
 
   // 句子最小长度（与 splitIntoSentences 一致）
   const MIN_SENTENCE_LENGTH = 5;
+  const validSentences = [];
 
-  const debugSentences = [];
-
-  // 递归处理节点
-  const processNode = (node, parentFragment) => {
-    if (node.nodeType === Node.TEXT_NODE) {
-      let text = node.textContent;
-
-      // 预处理：统一换行符为空格，合并多个空格（与 splitIntoSentences 一致）
-      text = text.replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim();
-
-      if (!text) {
-        parentFragment.appendChild(document.createTextNode(text));
-        return;
-      }
-
-      // 按句子边界分割（保留分隔符）
-      const parts = text.split(sentenceEndPattern);
-
-      parts.forEach((part) => {
-        if (!part) return;
-
-        // 如果是分隔符（句末标点），直接添加
-        if (part.match(/^[。！？.!?]+$/)) {
-          parentFragment.appendChild(document.createTextNode(part));
-        } else if (part.trim()) {
-          // 检查句子长度（与 splitIntoSentences 一致）
-          const cleaned = part.replace(/[\s，。！？.!?;；:：]+/g, '').trim();
-          if (cleaned.length > MIN_SENTENCE_LENGTH) {
-            // 如果是句子文本，创建可点击的 span
-            const span = document.createElement('span');
-            span.className = 'sentence-segment cursor-pointer hover:bg-gray-100 transition-colors px-0.5 rounded';
-            span.textContent = part;
-            debugSentences.push(`[TEXT] ${part.substring(0, 30)}`);
-            parentFragment.appendChild(span);
-          } else {
-            // 太短的句子不创建 span，直接添加文本
-            debugSentences.push(`[SKIP] ${part.substring(0, 20)} (len=${cleaned.length})`);
-            parentFragment.appendChild(document.createTextNode(part));
-          }
-        }
-      });
-    } else if (node.nodeType === Node.ELEMENT_NODE) {
-      // 保留原有标签，创建新元素
-      const newElement = document.createElement(node.tagName);
-
-      // 复制原有属性
-      Array.from(node.attributes).forEach(attr => {
-        newElement.setAttribute(attr.name, attr.value);
-      });
-
-      // 递归处理子节点
-      Array.from(node.childNodes).forEach(child => {
-        processNode(child, newElement);
-      });
-
-      parentFragment.appendChild(newElement);
+  parts.forEach(part => {
+    const cleaned = part.replace(/[\s，。！？.!?;；:：]+/g, '').trim();
+    if (cleaned.length > MIN_SENTENCE_LENGTH) {
+      validSentences.push(part);
     }
-  };
-
-  Array.from(tempDiv.childNodes).forEach(node => {
-    processNode(node, fragment);
   });
 
-  console.log('[splitHtmlBySentences] 生成的句子:', debugSentences);
+  // 如果过滤后没有句子，返回整个文本
+  if (validSentences.length === 0) {
+    return text;
+  }
+
+  console.log('[splitHtmlBySentences] 句子列表:', {
+    total: validSentences.length,
+    sentences: validSentences.map((s, i) => `[${i}]: ${s.substring(0, 30)}`)
+  });
+
+  // 创建 DOM 片段
+  const fragment = document.createDocumentFragment();
+  validSentences.forEach((sentence, index) => {
+    const span = document.createElement('span');
+    span.className = 'sentence-segment cursor-pointer hover:bg-gray-100 transition-colors px-0.5 rounded';
+    span.textContent = sentence;
+    span.setAttribute('data-sentence-index', index);
+    fragment.appendChild(span);
+  });
+
   return fragment;
 }
 
@@ -551,14 +530,11 @@ function ReadableContent({
     containerRef.current.innerHTML = '';
     containerRef.current.appendChild(documentFragment.cloneNode(true));
 
-    // 为所有句子元素添加索引
+    // 获取句子列表用于调试
     const sentenceSegments = containerRef.current.querySelectorAll('.sentence-segment');
     console.log('[DocumentEditor] DOM 句子列表:', {
       total: sentenceSegments.length,
       allSegments: Array.from(sentenceSegments).map((seg, i) => `[${i}]: ${seg.textContent.substring(0, 30)}`)
-    });
-    sentenceSegments.forEach((segment, index) => {
-      segment.setAttribute('data-sentence-index', index);
     });
   }, [documentFragment]);
 
