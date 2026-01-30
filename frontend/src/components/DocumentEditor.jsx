@@ -442,6 +442,7 @@ export function EditorToolbar({ editor }) {
 }
 
 // 将HTML内容按句子分割，每个句子包装成可点击的元素
+// 注意：分割逻辑需要与 splitIntoSentences 保持一致
 function splitHtmlBySentences(html) {
   if (!html || !html.trim()) return '';
 
@@ -450,8 +451,11 @@ function splitHtmlBySentences(html) {
 
   const fragment = document.createDocumentFragment();
 
-  // 句子边界正则：中英文句末符
-  const sentenceEndPattern = /([。！？.!?]+)/g;
+  // 句子边界正则：中英文句末符 + 换行符
+  const sentenceEndPattern = /([。！？.!?]+[\s]*)/g;
+
+  // 句子最小长度（与 splitIntoSentences 一致）
+  const MIN_SENTENCE_LENGTH = 5;
 
   // 递归处理节点
   const processNode = (node, parentFragment) => {
@@ -462,21 +466,28 @@ function splitHtmlBySentences(html) {
         return;
       }
 
-      // 按句子边界分割
+      // 按句子边界分割（保留分隔符）
       const parts = text.split(sentenceEndPattern);
 
-      parts.forEach((part, index) => {
+      parts.forEach((part) => {
         if (!part) return;
 
-        // 如果是分隔符（句末标点），直接添加
-        if (part.match(/^[。！？.!?]+$/)) {
+        // 如果是分隔符（句末标点 + 可选空格），直接添加
+        if (part.match(/^[。！？.!?]+[\s]*$/)) {
           parentFragment.appendChild(document.createTextNode(part));
         } else if (part.trim()) {
-          // 如果是句子文本，创建可点击的 span
-          const span = document.createElement('span');
-          span.className = 'sentence-segment cursor-pointer hover:bg-gray-100 transition-colors px-0.5 rounded';
-          span.textContent = part;
-          parentFragment.appendChild(span);
+          // 检查句子长度（与 splitIntoSentences 一致）
+          const cleaned = part.replace(/[\s，。！？.!?;；:：]+/g, '').trim();
+          if (cleaned.length > MIN_SENTENCE_LENGTH) {
+            // 如果是句子文本，创建可点击的 span
+            const span = document.createElement('span');
+            span.className = 'sentence-segment cursor-pointer hover:bg-gray-100 transition-colors px-0.5 rounded';
+            span.textContent = part;
+            parentFragment.appendChild(span);
+          } else {
+            // 太短的句子不创建 span，直接添加文本
+            parentFragment.appendChild(document.createTextNode(part));
+          }
         }
       });
     } else if (node.nodeType === Node.ELEMENT_NODE) {
@@ -533,6 +544,7 @@ function ReadableContent({
 
     // 为所有句子元素添加索引
     const sentenceSegments = containerRef.current.querySelectorAll('.sentence-segment');
+    console.log('[ReadableContent] DOM 句子数量:', sentenceSegments.length);
     sentenceSegments.forEach((segment, index) => {
       segment.setAttribute('data-sentence-index', index);
     });
@@ -554,6 +566,13 @@ function ReadableContent({
     // 高亮当前句子
     if ((isReading || readPosition > 0) && currentSentenceIndex >= 0) {
       const targetIndex = isReading ? currentSentenceIndex : readPosition;
+      console.log('[ReadableContent] 高亮索引:', {
+        isReading,
+        readPosition,
+        currentSentenceIndex,
+        targetIndex,
+        timestamp: new Date().toISOString()
+      });
       const targetSegment = containerRef.current.querySelector(
         `.sentence-segment[data-sentence-index="${targetIndex}"]`
       );
@@ -565,6 +584,8 @@ function ReadableContent({
         }
         // 自动滚动到高亮句子
         targetSegment.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } else {
+        console.warn('[ReadableContent] 未找到目标句子元素:', targetIndex);
       }
     }
   }, [currentSentenceIndex, isReading, readPosition]);
