@@ -8,13 +8,12 @@ export default function Sidebar({
   documentId,
   content,
   chapters,
-  // 朗读相关 props
   onSentenceChange,
   onPlayStateChange,
   startFromSentence = 0,
-  // 阅读进度相关
   initialProgress = null,
-  onProgressChange
+  onProgressChange,
+  onCloseReading
 }) {
   const [activePanel, setActivePanel] = useState(null);
 
@@ -169,6 +168,7 @@ export default function Sidebar({
                 startFromSentence={startFromSentence}
                 initialProgress={initialProgress}
                 onProgressChange={onProgressChange}
+                onClose={onCloseReading}
               />
             )}
             {activePanel === 'ai' && <AIChat content={content} />}

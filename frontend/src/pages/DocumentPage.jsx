@@ -923,6 +923,10 @@ export default function DocumentPage() {
           startFromSentence={startFromSentence}
           initialProgress={readingProgress}
           onProgressChange={handleProgressChange}
+          onCloseReading={() => {
+            setIsReading(false);
+            setStartFromSentence(0);
+          }}
         />
       )}
     </div>

@@ -71,10 +71,10 @@ export default function ReadAloud({
   onSentenceChange,
   startFromSentence = 0,
   onPlayStateChange,
-  // 新增：阅读进度相关
   documentId,
   initialProgress = null,
-  onProgressChange
+  onProgressChange,
+  onClose
 }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -614,13 +614,16 @@ export default function ReadAloud({
         )}
         {(isPlaying || isPaused) && (
           <button
-            onClick={handleStop}
+            onClick={() => {
+              handleStop();
+              onClose?.();
+            }}
             className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors text-sm flex items-center justify-center gap-2"
           >
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M6 6h12v12H6z"/>
+              <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
             </svg>
-            停止
+            关闭阅读
           </button>
         )}
       </div>
