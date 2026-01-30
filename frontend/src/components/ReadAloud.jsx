@@ -25,7 +25,7 @@ export function splitIntoSentences(html) {
 
   // 按中英文句号、问号、感叹号、分号分割，保留分隔符
   // 添加更多分隔符：分号、冒号、换行（段落分割）
-  const sentences = text
+  let sentences = text
     .split(/(?<=[。！？.!?;；:：\n])\s*/g)
     .map(s => s.trim())
     .filter(s => s.length > 0);
@@ -35,14 +35,33 @@ export function splitIntoSentences(html) {
   if (sentences.length < 3) {
     const lines = text.split(/\n+/g).map(s => s.trim()).filter(s => s.length > 0);
     if (lines.length > sentences.length) {
-      return lines;
+      sentences = lines;
     }
   }
 
   // 如果还是没有句子，返回整个文本作为一个句子
   if (sentences.length === 0) {
+    sentences = [text];
+  }
+
+  // 后处理：确保每个句子都有内容，过滤掉太短的片段
+  // 同时保留原始句子的完整性
+  sentences = sentences.filter(s => {
+    const cleaned = s.replace(/[\s，。！？.!?;；:：]+/g, '').trim();
+    return cleaned.length > 5; // 至少5个字符
+  });
+
+  // 如果过滤后没有句子，返回原始文本
+  if (sentences.length === 0) {
     return [text];
   }
+
+  console.log('[splitIntoSentences] 解析结果:', {
+    sentenceCount: sentences.length,
+    firstSentences: sentences.slice(0, 3).map(s => s.substring(0, 30)),
+    lastSentence: sentences[sentences.length - 1]?.substring(0, 30),
+    timestamp: new Date().toISOString()
+  });
 
   return sentences;
 }

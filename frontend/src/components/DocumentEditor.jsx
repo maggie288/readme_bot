@@ -506,18 +506,96 @@ function ReadableContent({
 
     // 高亮当前朗读的句子
     if (isReading && currentSentence) {
+      // 添加诊断日志：对比 HTML 纯文本和句子
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = html;
+      const htmlText = tempDiv.textContent || tempDiv.innerText || '';
+      const normalizedHtmlText = htmlText.replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ');
+      const normalizedSentence = currentSentence.replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ');
+
+      console.log('[ReadableContent] 诊断 - HTML纯文本 vs 句子:', {
+        htmlTextLength: htmlText.length,
+        htmlTextPreview: htmlText.substring(0, 100),
+        sentence: normalizedSentence.substring(0, 50),
+        sentenceLength: normalizedSentence.length,
+        foundInHtml: normalizedHtmlText.includes(normalizedSentence),
+        htmlTextContains: normalizedHtmlText.includes(normalizedSentence.substring(0, 20)),
+        timestamp: new Date().toISOString()
+      });
+
+      // 方法1: 尝试直接匹配（适用于纯文本或简单格式）
+      let highlightedHtml = html;
+      let matchCount = 0;
+
       const escapedSentence = currentSentence.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const regex = new RegExp(`(${escapedSentence})`, 'g');
+      const directRegex = new RegExp(`(${escapedSentence})`, 'g');
       const beforeCount = (html.match(/<mark/g) || []).length;
-      html = html.replace(regex, '<mark class="sentence-highlight bg-yellow-300 text-gray-900 rounded px-0.5">$1</mark>');
-      const afterCount = (html.match(/<mark/g) || []).length;
+      highlightedHtml = html.replace(directRegex, '<mark class="sentence-highlight bg-yellow-300 text-gray-900 rounded px-0.5">$1</mark>');
+      matchCount = (highlightedHtml.match(/<mark/g) || []).length - beforeCount;
+
+      // 如果直接匹配失败，尝试模糊匹配
+      if (matchCount === 0) {
+        console.log('[ReadableContent] 直接匹配失败，尝试模糊匹配:', {
+          currentSentence: currentSentence.substring(0, 40),
+          timestamp: new Date().toISOString()
+        });
+
+        // 规范化 HTML 和句子文本
+        const normalizedHtml = html.replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ');
+        const normalizedSentence = currentSentence.replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ');
+
+        // 尝试找到规范化后的句子在 HTML 中的位置
+        const sentenceIndex = normalizedHtml.indexOf(normalizedSentence);
+
+        if (sentenceIndex >= 0) {
+          // 找到位置，尝试在原始 HTML 中找到对应的文本片段
+          // 从找到的位置向前后扩展，找到最近的标签边界
+          const beforeText = normalizedHtml.substring(0, sentenceIndex);
+          const afterText = normalizedHtml.substring(sentenceIndex);
+
+          // 在原始 HTML 中找到匹配的位置
+          const htmlBeforeMatch = beforeText;
+          const htmlAfterMatch = normalizedSentence + afterText.substring(normalizedSentence.length);
+
+          // 使用正则找到 HTML 中对应的文本并高亮
+          const cleanSentence = normalizedSentence.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const fuzzyRegex = new RegExp(`(${cleanSentence})`, 'g');
+          highlightedHtml = html.replace(fuzzyRegex, '<mark class="sentence-highlight bg-yellow-300 text-gray-900 rounded px-0.5">$1</mark>');
+          matchCount = (highlightedHtml.match(/<mark/g) || []).length;
+
+          console.log('[ReadableContent] 模糊匹配结果:', {
+            foundPosition: sentenceIndex,
+            matchCount,
+            timestamp: new Date().toISOString()
+          });
+        } else {
+          // 最后尝试：使用句子中较长的连续字符片段进行匹配
+          // 找到句子中最长的一段连续字符（不含空格）
+          const charSequenceMatch = currentSentence.match(/[^\s，。！？.!?;；:：]{10,}/);
+          if (charSequenceMatch) {
+            const charSequence = charSequenceMatch[0];
+            const charRegex = new RegExp(`(${charSequence.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'g');
+            highlightedHtml = html.replace(charRegex, '<mark class="sentence-highlight bg-yellow-300 text-gray-900 rounded px-0.5">$1</mark>');
+            matchCount = (highlightedHtml.match(/<mark/g) || []).length;
+            console.log('[ReadableContent] 字符片段匹配:', {
+              charSequence,
+              matchCount,
+              timestamp: new Date().toISOString()
+            });
+          }
+        }
+      }
+
+      const afterCount = (highlightedHtml.match(/<mark/g) || []).length;
       console.log('[ReadableContent] 高亮处理 (isReading):', {
         currentSentence: currentSentence.substring(0, 30),
-        escapedSentence: escapedSentence.substring(0, 30),
+        matchCount,
         markBefore: beforeCount,
         markAfter: afterCount,
         timestamp: new Date().toISOString()
       });
+
+      html = highlightedHtml;
     } else if (!isReading && readPositionSentence && readPosition > 0) {
       // 高亮上次阅读位置
       const escapedSentence = readPositionSentence.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
