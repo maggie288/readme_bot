@@ -35,6 +35,7 @@ export default function DocumentPage() {
   const [isReading, setIsReading] = useState(false);
   const [currentSentenceIndex, setCurrentSentenceIndex] = useState(-1);
   const [startFromSentence, setStartFromSentence] = useState(0);
+  const [jumpToSentence, setJumpToSentence] = useState(null);
 
   // 阅读进度状态
   const [readingProgress, setReadingProgress] = useState(null);
@@ -352,7 +353,7 @@ export default function DocumentPage() {
 
   // 处理点击句子（从该句子开始朗读）
   const handleSentenceClick = useCallback((index) => {
-    console.log('[DocumentPage] handleSentenceClick 被调用:', { index, timestamp: new Date().toISOString() });
+    console.log('[DocumentPage] handleSentenceClick 被调用:', { index, isReading, timestamp: new Date().toISOString() });
 
     // 停止朗读
     if (index === -1) {
@@ -372,7 +373,13 @@ export default function DocumentPage() {
       console.log('[DocumentPage] 更新 readingProgress:', { prev, newProgress, timestamp: new Date().toISOString() });
       return newProgress;
     });
-  }, []);
+
+    // 如果正在朗读，直接设置跳转目标
+    if (isReading) {
+      console.log('[DocumentPage] 设置跳转目标:', index);
+      setJumpToSentence(index);
+    }
+  }, [isReading, jumpToSentence, setJumpToSentence]);
 
   const isOwner = document?.author?.id === user?.id;
   const hasPdfPages = document?.pdfPages && document.pdfPages.length > 0;
@@ -927,6 +934,8 @@ export default function DocumentPage() {
             setIsReading(false);
             setStartFromSentence(0);
           }}
+          jumpToSentence={jumpToSentence}
+          setJumpToSentence={setJumpToSentence}
         />
       )}
     </div>

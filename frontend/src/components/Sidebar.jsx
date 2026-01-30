@@ -13,7 +13,9 @@ export default function Sidebar({
   startFromSentence = 0,
   initialProgress = null,
   onProgressChange,
-  onCloseReading
+  onCloseReading,
+  jumpToSentence,
+  setJumpToSentence
 }) {
   const [activePanel, setActivePanel] = useState(null);
 
@@ -169,6 +171,8 @@ export default function Sidebar({
                 initialProgress={initialProgress}
                 onProgressChange={onProgressChange}
                 onClose={onCloseReading}
+                jumpToTarget={jumpToSentence}
+                setJumpToTarget={setJumpToSentence}
               />
             )}
             {activePanel === 'ai' && <AIChat content={content} />}
