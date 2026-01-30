@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { authAPI } from '../services/api';
-import MobileHeader from '../components/MobileHeader';
+import Header from '../components/Header';
 
 export default function PurchaseHistory({ user, onLogout }) {
   const navigate = useNavigate();
@@ -42,14 +42,14 @@ export default function PurchaseHistory({ user, onLogout }) {
 
   const PurchaseCard = ({ item, type }) => (
     <Link
-      to={`/m/document/${item.document.id}`}
-      className="block bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow"
+      to={`/document/${item.document.id}`}
+      className="block bg-white rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow"
     >
-      <div className="flex items-start justify-between mb-2">
-        <h3 className="font-medium text-gray-900 line-clamp-1 flex-1 pr-4">
+      <div className="flex items-start justify-between mb-3">
+        <h3 className="font-medium text-gray-900 line-clamp-1 flex-1 pr-4 text-lg">
           {item.document?.title || '未命名文档'}
         </h3>
-        <span className="text-lg font-bold text-gray-900">
+        <span className="text-xl font-bold text-gray-900">
           ¥{item.price.toFixed(2)}
         </span>
       </div>
@@ -57,7 +57,7 @@ export default function PurchaseHistory({ user, onLogout }) {
         <p className="text-sm text-gray-500">
           {formatDate(item.createdAt)}
         </p>
-        <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+        <span className={`px-3 py-1 rounded-full text-sm font-medium ${
           type === 'document'
             ? 'bg-blue-100 text-blue-700'
             : 'bg-purple-100 text-purple-700'
@@ -72,21 +72,31 @@ export default function PurchaseHistory({ user, onLogout }) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <MobileHeader user={user} onLogout={onLogout} />
+      <Header user={user} onLogout={onLogout} showDocTitle={false} />
 
-      <main className="px-4 py-4 pb-24">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-lg font-semibold text-gray-900">购买记录</h1>
+      <main className="max-w-4xl mx-auto px-4 py-8">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => navigate(-1)}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <h1 className="text-2xl font-semibold text-gray-900">购买记录</h1>
+          </div>
           <span className="text-sm text-gray-500">共 {totalCount} 笔</span>
         </div>
 
-        <div className="flex gap-2 mb-4 overflow-x-auto">
+        <div className="flex gap-3 mb-6">
           <button
             onClick={() => setActiveTab('documents')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-colors ${
               activeTab === 'documents'
                 ? 'bg-blue-500 text-white'
-                : 'bg-white text-gray-700 shadow-sm'
+                : 'bg-white text-gray-700 shadow-sm hover:bg-gray-50'
             }`}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -96,10 +106,10 @@ export default function PurchaseHistory({ user, onLogout }) {
           </button>
           <button
             onClick={() => setActiveTab('translations')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-colors ${
               activeTab === 'translations'
                 ? 'bg-blue-500 text-white'
-                : 'bg-white text-gray-700 shadow-sm'
+                : 'bg-white text-gray-700 shadow-sm hover:bg-gray-50'
             }`}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -115,76 +125,44 @@ export default function PurchaseHistory({ user, onLogout }) {
           </div>
         ) : activeTab === 'documents' ? (
           purchases.documents.length === 0 ? (
-            <div className="bg-white rounded-xl p-8 text-center shadow-sm">
+            <div className="bg-white rounded-xl p-12 text-center shadow-sm">
               <div className="text-gray-400 mb-4">
-                <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-20 h-20 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
               </div>
-              <p className="text-gray-500 mb-4">暂无文档购买记录</p>
+              <p className="text-gray-500 mb-6 text-lg">暂无文档购买记录</p>
               <Link
-                to="/m/home"
-                className="inline-block px-4 py-2 bg-blue-500 text-white rounded-lg text-sm"
+                to="/"
+                className="inline-block px-6 py-2.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
               >
                 去浏览
               </Link>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {purchases.documents.map((item) => (
                 <PurchaseCard key={item.id} item={item} type="document" />
               ))}
             </div>
           )
         ) : purchases.translations.length === 0 ? (
-          <div className="bg-white rounded-xl p-8 text-center shadow-sm">
+          <div className="bg-white rounded-xl p-12 text-center shadow-sm">
             <div className="text-gray-400 mb-4">
-              <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-20 h-20 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
               </svg>
             </div>
-            <p className="text-gray-500 mb-4">暂无翻译购买记录</p>
+            <p className="text-gray-500 mb-6 text-lg">暂无翻译购买记录</p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {purchases.translations.map((item) => (
               <PurchaseCard key={item.id} item={item} type="translation" />
             ))}
           </div>
         )}
       </main>
-
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 pb-safe">
-        <div className="flex justify-around py-2">
-          <Link
-            to="/m/home"
-            className="flex flex-col items-center px-4 py-2 text-gray-500"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-            </svg>
-            <span className="text-xs mt-1">首页</span>
-          </Link>
-          <Link
-            to="/m/bookshelf"
-            className="flex flex-col items-center px-4 py-2 text-gray-500"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-            </svg>
-            <span className="text-xs mt-1">书架</span>
-          </Link>
-          <Link
-            to="/m/profile"
-            className="flex flex-col items-center px-4 py-2 text-gray-500"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-            <span className="text-xs mt-1">我的</span>
-          </Link>
-        </div>
-      </nav>
     </div>
   );
 }

@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { voiceAPI } from '../services/api';
 import { splitIntoSentences } from './ReadAloud';
 
-export default function MobileReadAloud({
+const MobileReadAloud = forwardRef(function MobileReadAloud({
   content,
   onSentenceChange,
   startFromSentence = 0,
@@ -13,7 +13,7 @@ export default function MobileReadAloud({
   onClose,
   jumpToTarget,
   setJumpToTarget
-}) {
+}, ref) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [currentSentenceIndex, setCurrentSentenceIndex] = useState(
@@ -152,6 +152,19 @@ export default function MobileReadAloud({
       setShowCurrentSentence(true);
     }
   }, []);
+
+  // 暴露方法给父组件
+  useImperativeHandle(ref, () => ({
+    handlePlay: () => {
+      handlePlay();
+    },
+    handlePause: () => {
+      handlePause();
+    },
+    handleStop: () => {
+      handleStop();
+    }
+  }), [handlePlay, handlePause, handleStop]);
 
   const speakWithCustomVoice = useCallback(async (index) => {
     if (index >= sentences.length || isCancelledRef.current) {
@@ -758,4 +771,6 @@ export default function MobileReadAloud({
       `}</style>
     </div>
   );
-}
+})
+
+export default MobileReadAloud;

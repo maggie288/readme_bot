@@ -4,6 +4,7 @@ import { documentsAPI, bookshelfAPI } from '../services/api';
 import MobileDocumentEditor from '../components/MobileDocumentEditor';
 import MobileReadAloud from '../components/MobileReadAloud';
 import MobileSidebar from '../components/MobileSidebar';
+import MobileVoiceRecorder from '../components/MobileVoiceRecorder';
 import PDFViewer from '../components/PDFViewer';
 import { EditorContent } from '@tiptap/react';
 import { StarterKit } from '@tiptap/starter-kit';
@@ -44,8 +45,11 @@ export default function MobileDocumentPage() {
   const [showSidebar, setShowSidebar] = useState(false);
   const [isInBookshelf, setIsInBookshelf] = useState(false);
   const [purchasing, setPurchasing] = useState(false);
+  const [showReadMenu, setShowReadMenu] = useState(false);
+  const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
 
   const editorRef = useRef(null);
+  const readAloudRef = useRef(null);
   const progressSaveTimerRef = useRef(null);
   const autoSaveTimerRef = useRef(null);
   const [lastSaved, setLastSaved] = useState(null);
@@ -703,6 +707,7 @@ export default function MobileDocumentPage() {
 
           {isReading && (
             <MobileReadAloud
+              ref={readAloudRef}
               content={currentContent}
               onSentenceChange={handleSentenceChange}
               startFromSentence={startFromSentence}
@@ -718,24 +723,67 @@ export default function MobileDocumentPage() {
             showTabBar && !isReading ? 'translate-y-0' : 'translate-y-full'
           }`}>
             <div className="flex items-center justify-around py-2 px-4">
-              <button
-                onPointerDown={(e) => {
-                  e.preventDefault();
-                  console.log('[MobileDocumentPage] 朗读按钮点击: isReading=', isReading);
-                  const newValue = !isReading;
-                  console.log('[MobileDocumentPage] 设置 isReading =', newValue);
-                  setIsReading(newValue);
-                }}
-                className={`flex flex-col items-center p-2 touch-manipulation ${
-                  isReading ? 'text-red-500' : 'text-gray-600'
-                }`}
-                style={{ WebkitTapHighlightColor: 'transparent' }}
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                </svg>
-                <span className="text-xs mt-1">{isReading ? '停止' : '朗读'}</span>
-              </button>
+              <div className="relative">
+                <button
+                  onPointerDown={(e) => {
+                    e.preventDefault();
+                    setShowReadMenu(!showReadMenu);
+                  }}
+                  className={`flex flex-col items-center p-2 touch-manipulation ${
+                    isReading ? 'text-red-500' : 'text-gray-600'
+                  }`}
+                  style={{ WebkitTapHighlightColor: 'transparent' }}
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                  </svg>
+                  <span className="text-xs mt-1">{isReading ? '停止' : '朗读'}</span>
+                </button>
+
+                {/* 朗读选项菜单 */}
+                {showReadMenu && (
+                  <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-white rounded-xl shadow-lg border border-gray-200 p-2 min-w-[140px] z-50">
+                    <button
+                      onClick={() => {
+                        setShowReadMenu(false);
+                        setIsReading(true);
+                        setTimeout(() => {
+                          if (readAloudRef.current) {
+                            readAloudRef.current.handlePlay?.();
+                          }
+                        }, 100);
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-lg"
+                    >
+                      <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      开始朗读
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowReadMenu(false);
+                        setShowVoiceRecorder(true);
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-lg"
+                    >
+                      <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                      </svg>
+                      克隆我的声音
+                    </button>
+                  </div>
+                )}
+
+                {/* 点击遮罩关闭菜单 */}
+                {showReadMenu && (
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setShowReadMenu(false)}
+                  />
+                )}
+              </div>
 
               <button
                 onPointerDown={(e) => {
@@ -752,6 +800,15 @@ export default function MobileDocumentPage() {
               </button>
             </div>
           </div>
+
+          {/* 声音克隆弹窗 */}
+          <MobileVoiceRecorder
+            isOpen={showVoiceRecorder}
+            onClose={() => setShowVoiceRecorder(false)}
+            onVoiceCloned={(data) => {
+              console.log('[MobileDocumentPage] 声音克隆成功:', data);
+            }}
+          />
 
           {/* 侧边栏 */}
           <MobileSidebar
