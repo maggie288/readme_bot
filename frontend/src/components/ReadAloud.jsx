@@ -220,13 +220,23 @@ export default function ReadAloud({
 
   // 当外部 startFromSentence 改变时更新（点击句子触发）
   useEffect(() => {
+    console.log('[useEffect startFromSentence]', {
+      startFromSentence,
+      currentSentenceIndex,
+      isPlaying,
+      isPaused,
+      willUpdate: startFromSentence !== currentSentenceIndex
+    });
+
     if (startFromSentence !== currentSentenceIndex) {
       if (isPlaying || isPaused) {
+        console.log('[useEffect] 调用 handleJumpToSentence:', startFromSentence);
         // 使用 ref 来避免依赖 handleJumpToSentence
         if (handleJumpToSentenceRef.current) {
           handleJumpToSentenceRef.current(startFromSentence);
         }
       } else {
+        console.log('[useEffect] 设置 currentSentenceIndex:', startFromSentence);
         setCurrentSentenceIndex(startFromSentence);
       }
     }
@@ -279,8 +289,11 @@ export default function ReadAloud({
 
   // 朗读单个句子 - 添加重试机制
   const speakSentence = useCallback((index, retryCount = 0) => {
+    console.log('[speakSentence] 被调用:', { index, retryCount, sentencesLength: sentences.length });
+
     if (index >= sentences.length || isCancelledRef.current) {
       // 所有句子朗读完毕
+      console.log('[speakSentence] 朗读完毕，停止');
       setIsPlaying(false);
       setIsPaused(false);
       if (onSentenceChange) {
