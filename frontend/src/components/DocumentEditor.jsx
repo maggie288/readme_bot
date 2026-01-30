@@ -441,6 +441,131 @@ export function EditorToolbar({ editor }) {
   );
 }
 
+// 辅助函数：在 HTML 中高亮指定范围的文本
+function highlightTextInHtml(html, startPos, endPos, isReading) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+  let textOffset = 0;
+  const highlightClass = isReading
+    ? 'sentence-highlight bg-yellow-300 text-gray-900 rounded px-0.5'
+    : 'sentence-highlight bg-blue-100 text-gray-900 rounded px-0.5';
+
+  // 收集需要修改的节点和操作
+  const modifications = [];
+
+  function collectNodes(node) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const nodeLength = node.textContent.length;
+      const nodeStart = textOffset;
+      const nodeEnd = textOffset + nodeLength;
+
+      // 检查这个文本节点是否与高亮范围重叠
+      if (nodeEnd > startPos && nodeEnd <= endPos) {
+        // 整个节点在高亮范围内
+        modifications.push({
+          type: 'replace',
+          node: node,
+          markContent: node.textContent
+        });
+      } else if (nodeStart < endPos && nodeEnd > startPos) {
+        // 部分重叠，需要拆分
+        const beforeLen = Math.max(0, startPos - nodeStart);
+        const afterStart = Math.min(nodeLength, endPos - nodeStart);
+        const highlightLen = Math.max(0, afterStart - beforeLen);
+
+        if (beforeLen > 0 && highlightLen > 0 && nodeLength > afterStart) {
+          // 三段都有内容
+          modifications.push({
+            type: 'split-three',
+            node: node,
+            beforeLen,
+            highlightLen,
+            afterLen: nodeLength - afterStart
+          });
+        } else if (beforeLen > 0 && highlightLen > 0) {
+          // 前两段
+          modifications.push({
+            type: 'split-two-start',
+            node: node,
+            beforeLen,
+            highlightLen
+          });
+        } else if (highlightLen > 0 && nodeLength > afterStart) {
+          // 后两段
+          modifications.push({
+            type: 'split-two-end',
+            node: node,
+            highlightLen,
+            afterLen: nodeLength - afterStart
+          });
+        }
+      }
+
+      textOffset = nodeEnd;
+    } else if (node.nodeType === Node.ELEMENT_NODE) {
+      if (node.tagName !== 'SCRIPT' && node.tagName !== 'STYLE') {
+        Array.from(node.childNodes).forEach(child => collectNodes(child));
+      }
+    }
+  }
+
+  collectNodes(doc.body);
+
+  // 执行修改（从后往前，避免索引问题）
+  for (let i = modifications.length - 1; i >= 0; i--) {
+    const mod = modifications[i];
+    const parent = mod.node.parentNode;
+
+    if (mod.type === 'replace') {
+      const mark = document.createElement('mark');
+      mark.className = highlightClass;
+      mark.textContent = mod.markContent;
+      parent.replaceChild(mark, mod.node);
+    } else if (mod.type === 'split-three') {
+      const afterText = mod.node.textContent.substring(mod.beforeLen + mod.highlightLen);
+      const highlightText = mod.node.textContent.substring(mod.beforeLen, mod.beforeLen + mod.highlightLen);
+      const beforeText = mod.node.textContent.substring(0, mod.beforeLen);
+
+      const afterNode = document.createTextNode(afterText);
+      const mark = document.createElement('mark');
+      mark.className = highlightClass;
+      mark.textContent = highlightText;
+      const beforeNode = document.createTextNode(beforeText);
+
+      parent.insertBefore(afterNode, mod.node);
+      parent.insertBefore(mark, mod.node);
+      parent.insertBefore(beforeNode, mod.node);
+      parent.removeChild(mod.node);
+    } else if (mod.type === 'split-two-start') {
+      const highlightText = mod.node.textContent.substring(mod.beforeLen, mod.beforeLen + mod.highlightLen);
+      const beforeText = mod.node.textContent.substring(0, mod.beforeLen);
+
+      const mark = document.createElement('mark');
+      mark.className = highlightClass;
+      mark.textContent = highlightText;
+      const beforeNode = document.createTextNode(beforeText);
+
+      parent.insertBefore(mark, mod.node);
+      parent.insertBefore(beforeNode, mod.node);
+      parent.removeChild(mod.node);
+    } else if (mod.type === 'split-two-end') {
+      const highlightText = mod.node.textContent.substring(0, mod.highlightLen);
+      const afterText = mod.node.textContent.substring(mod.highlightLen);
+
+      const mark = document.createElement('mark');
+      mark.className = highlightClass;
+      mark.textContent = highlightText;
+      const afterNode = document.createTextNode(afterText);
+
+      parent.insertBefore(afterNode, mod.node);
+      parent.insertBefore(mark, mod.node);
+      parent.removeChild(mod.node);
+    }
+  }
+
+  return doc.body.innerHTML;
+}
+
 // 可朗读内容组件 - 渲染完整HTML内容，支持句子高亮和点击
 function ReadableContent({ content, currentSentenceIndex, onSentenceClick, isReading, readPosition = 0 }) {
   const sentences = useMemo(() => splitIntoSentences(content || ''), [content]);
@@ -450,13 +575,14 @@ function ReadableContent({ content, currentSentenceIndex, onSentenceClick, isRea
   const currentSentence = sentences[currentSentenceIndex];
   const readPositionSentence = sentences[readPosition];
 
-  // 处理 HTML 内容，高亮当前句子 - 必须在早期返回之前调用
+  // 高亮处理
   const processedContent = useMemo(() => {
     if (!content || content.trim() === '' || content === '<p></p>') {
       return '';
     }
-    // 首先使用 DOMPurify 清理 HTML 防止 XSS 攻击
-    let html = DOMPurify.sanitize(content, {
+
+    // 清理 HTML
+    const cleanHtml = DOMPurify.sanitize(content, {
       ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 's', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
         'ul', 'ol', 'li', 'blockquote', 'pre', 'code', 'a', 'img', 'table', 'thead', 'tbody',
         'tr', 'th', 'td', 'mark', 'span', 'div', 'hr', 'input', 'figure', 'figcaption'],
@@ -465,19 +591,34 @@ function ReadableContent({ content, currentSentenceIndex, onSentenceClick, isRea
       ALLOW_DATA_ATTR: true,
     });
 
-    // 高亮当前朗读的句子
+    // 提取纯文本
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = cleanHtml;
+    const plainText = tempDiv.textContent || tempDiv.innerText || '';
+
+    // 获取需要高亮的句子
+    let targetSentence = null;
     if (isReading && currentSentence) {
-      const escapedSentence = currentSentence.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const regex = new RegExp(`(${escapedSentence})`, 'g');
-      html = html.replace(regex, '<mark class="sentence-highlight bg-yellow-300 text-gray-900 rounded px-0.5">$1</mark>');
+      targetSentence = currentSentence;
     } else if (!isReading && readPositionSentence && readPosition > 0) {
-      // 高亮上次阅读位置
-      const escapedSentence = readPositionSentence.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const regex = new RegExp(`(${escapedSentence})`, 'g');
-      html = html.replace(regex, '<mark class="sentence-highlight bg-blue-100 text-gray-900 rounded px-0.5">$1</mark>');
+      targetSentence = readPositionSentence;
     }
 
-    return html;
+    if (!targetSentence) {
+      return cleanHtml;
+    }
+
+    // 在纯文本中找到句子的位置范围
+    const sentenceStart = plainText.indexOf(targetSentence);
+    if (sentenceStart === -1) {
+      return cleanHtml;
+    }
+    const sentenceEnd = sentenceStart + targetSentence.length;
+
+    // 使用 TreeWalker 遍历文本节点，只高亮指定范围内的文本
+    const resultHtml = highlightTextInHtml(cleanHtml, sentenceStart, sentenceEnd, isReading);
+
+    return resultHtml;
   }, [content, currentSentence, readPositionSentence, isReading, readPosition]);
 
   // 自动滚动到当前高亮句子
