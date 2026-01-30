@@ -451,8 +451,8 @@ function splitHtmlBySentences(html) {
 
   const fragment = document.createDocumentFragment();
 
-  // 句子边界正则：中英文句末符 + 换行符
-  const sentenceEndPattern = /([。！？.!?]+[\s]*)/g;
+  // 句子边界正则：中英文句末符
+  const sentenceEndPattern = /([。！？.!?]+)/g;
 
   // 句子最小长度（与 splitIntoSentences 一致）
   const MIN_SENTENCE_LENGTH = 5;
@@ -462,8 +462,12 @@ function splitHtmlBySentences(html) {
   // 递归处理节点
   const processNode = (node, parentFragment) => {
     if (node.nodeType === Node.TEXT_NODE) {
-      const text = node.textContent;
-      if (!text.trim()) {
+      let text = node.textContent;
+
+      // 预处理：统一换行符为空格，合并多个空格（与 splitIntoSentences 一致）
+      text = text.replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim();
+
+      if (!text) {
         parentFragment.appendChild(document.createTextNode(text));
         return;
       }
@@ -474,8 +478,8 @@ function splitHtmlBySentences(html) {
       parts.forEach((part) => {
         if (!part) return;
 
-        // 如果是分隔符（句末标点 + 可选空格），直接添加
-        if (part.match(/^[。！？.!?]+[\s]*$/)) {
+        // 如果是分隔符（句末标点），直接添加
+        if (part.match(/^[。！？.!?]+$/)) {
           parentFragment.appendChild(document.createTextNode(part));
         } else if (part.trim()) {
           // 检查句子长度（与 splitIntoSentences 一致）

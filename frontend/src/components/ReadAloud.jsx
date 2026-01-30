@@ -24,9 +24,8 @@ export function splitIntoSentences(html) {
   }
 
   // 按中英文句号、问号、感叹号、分号分割，保留分隔符
-  // 添加更多分隔符：分号、冒号、换行（段落分割）
   let sentences = text
-    .split(/(?<=[。！？.!?;；:：\n])\s*/g)
+    .split(/(?<=[。！？.!?;；:：])\s*/g)
     .map(s => s.trim())
     .filter(s => s.length > 0);
 
