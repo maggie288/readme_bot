@@ -508,7 +508,23 @@ function ReadableContent({
 
     console.log('[ReadableContent] DOMPurify 后:', {
       htmlLength: html.length,
-      hasMarkBefore: html.includes('<mark'),
+      htmlPreview: html.substring(0, 100),
+      htmlFull: html,  // 完整 HTML
+      contentChanged: html !== content,
+      contentLengthDiff: html.length - content.length,
+      timestamp: new Date().toISOString()
+    });
+
+    // 提取纯文本用于句子分割
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+    const htmlText = tempDiv.textContent || tempDiv.innerText || '';
+    
+    console.log('[ReadableContent] HTML 纯文本:', {
+      htmlTextLength: htmlText.length,
+      htmlTextPreview: htmlText.substring(0, 100),
+      htmlTextFull: htmlText,  // 完整纯文本
+      contentTextLength: content.length,
       timestamp: new Date().toISOString()
     });
 
