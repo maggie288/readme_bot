@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { documentsAPI } from '../services/api';
 
 export default function MobileDocumentPage() {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [document, setDocument] = useState(null);
   const [content, setContent] = useState('');
@@ -17,28 +18,43 @@ export default function MobileDocumentPage() {
   const [contentTab, setContentTab] = useState('original');
   const [translatedContent, setTranslatedContent] = useState(null);
   const [showTranslationPanel, setShowTranslationPanel] = useState(false);
+  const [debugInfo, setDebugInfo] = useState('');
 
   const contentRef = useRef(null);
   const controlsTimeoutRef = useRef(null);
   const speechSynthesisRef = useRef(null);
 
+  const logDebug = useCallback((msg) => {
+    const timestamp = new Date().toLocaleTimeString();
+    const logMsg = `[${timestamp}] ${msg}`;
+    console.log(logMsg);
+    setDebugInfo(prev => prev ? `${prev}\n${logMsg}` : logMsg);
+  }, []);
+
   const loadDocument = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
+      logDebug(`开始加载文档: ${id}`);
+      
       const response = await documentsAPI.getById(id);
+      logDebug(`文档加载成功: ${response.data.title}`);
+      
       setDocument(response.data);
       setContent(response.data.content || '');
       if (response.data.translatedContent) {
         setTranslatedContent(response.data.translatedContent);
+        logDebug('翻译内容已加载');
       }
     } catch (error) {
       console.error('Load document error:', error);
+      logDebug(`加载失败: ${error.message}`);
       setError(error.response?.data?.error || '加载文档失败');
     } finally {
       setLoading(false);
+      logDebug(`加载完成, loading=${false}`);
     }
-  }, [id]);
+  }, [id, logDebug]);
 
   useEffect(() => {
     loadDocument();
@@ -174,10 +190,22 @@ export default function MobileDocumentPage() {
 
   const currentContent = contentTab === 'translation' && translatedContent ? translatedContent : content;
 
+  const switchToDesktop = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('view', 'desktop');
+    window.location.href = url.toString();
+  };
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
+        <div className="text-gray-500">加载中...</div>
+        {debugInfo && (
+          <div className="mt-4 p-4 bg-gray-100 rounded text-xs text-gray-600 max-w-xs whitespace-pre-wrap">
+            {debugInfo}
+          </div>
+        )}
       </div>
     );
   }
@@ -186,12 +214,32 @@ export default function MobileDocumentPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-4">
         <div className="text-red-500 mb-4">{error}</div>
-        <button
-          onClick={() => navigate(-1)}
-          className="px-4 py-2 bg-blue-500 text-white rounded-lg"
-        >
-          返回
-        </button>
+        <div className="text-sm text-gray-500 mb-4">文档 ID: {id}</div>
+        {debugInfo && (
+          <div className="mb-4 p-4 bg-gray-100 rounded text-xs text-gray-600 max-w-xs whitespace-pre-wrap max-h-40 overflow-auto">
+            {debugInfo}
+          </div>
+        )}
+        <div className="flex gap-2">
+          <button
+            onClick={() => loadDocument()}
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg"
+          >
+            重试
+          </button>
+          <button
+            onClick={switchToDesktop}
+            className="px-4 py-2 bg-gray-500 text-white rounded-lg"
+          >
+            切换桌面版
+          </button>
+          <button
+            onClick={() => navigate(-1)}
+            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg"
+          >
+            返回
+          </button>
+        </div>
       </div>
     );
   }
@@ -406,6 +454,14 @@ export default function MobileDocumentPage() {
       <div className="fixed bottom-24 left-1/2 transform -translate-x-1/2 text-sm text-gray-400 pointer-events-none">
         点击屏幕显示/隐藏控制栏
       </div>
+
+      {/* 切换桌面版按钮 */}
+      <button
+        onClick={switchToDesktop}
+        className="fixed bottom-24 right-4 bg-gray-800 text-white px-3 py-2 rounded-full text-sm shadow-lg z-40"
+      >
+        桌面版
+      </button>
     </div>
   );
 }

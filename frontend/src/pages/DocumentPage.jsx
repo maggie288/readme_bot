@@ -938,6 +938,18 @@ export default function DocumentPage() {
           setJumpToSentence={setJumpToSentence}
         />
       )}
+
+      {/* 切换移动版按钮 */}
+      <button
+        onClick={() => {
+          const url = new URL(window.location.href);
+          url.searchParams.set('view', 'mobile');
+          window.location.href = url.toString();
+        }}
+        className="fixed bottom-4 right-4 bg-blue-500 text-white px-3 py-2 rounded-full text-sm shadow-lg z-40 hover:bg-blue-600 transition-colors"
+      >
+        移动版
+      </button>
     </div>
   );
 }
