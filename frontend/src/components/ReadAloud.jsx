@@ -87,6 +87,9 @@ export default function ReadAloud({
   const speedRef = useRef(speed);
   const isSpeedChangingRef = useRef(false);
 
+  // 使用 ref 存储用户点击的目标句子索引
+  const targetSentenceRef = useRef(null);
+
   // 自定义声音相关状态
   const [useCustomVoice, setUseCustomVoice] = useState(false);
   const [customVoiceInfo, setCustomVoiceInfo] = useState(null);
@@ -220,27 +223,44 @@ export default function ReadAloud({
 
   // 当外部 startFromSentence 改变时更新（点击句子触发）
   useEffect(() => {
+    // 避免在 sentences 未加载时处理
+    if (sentences.length === 0) return;
+
     console.log('[useEffect startFromSentence]', {
       startFromSentence,
       currentSentenceIndex,
+      targetSentence: targetSentenceRef.current,
       isPlaying,
-      isPaused,
-      willUpdate: startFromSentence !== currentSentenceIndex
+      isPaused
     });
 
-    if (startFromSentence !== currentSentenceIndex) {
+    // 如果有用户点击的目标句子，优先处理
+    if (targetSentenceRef.current !== null) {
+      const targetIndex = targetSentenceRef.current;
+      console.log('[useEffect] 检测到用户点击目标:', targetIndex);
+
       if (isPlaying || isPaused) {
-        console.log('[useEffect] 调用 handleJumpToSentence:', startFromSentence);
-        // 使用 ref 来避免依赖 handleJumpToSentence
+        // 播放中：跳转到目标句子
+        console.log('[useEffect] 播放中跳转:', targetIndex);
         if (handleJumpToSentenceRef.current) {
-          handleJumpToSentenceRef.current(startFromSentence);
+          handleJumpToSentenceRef.current(targetIndex);
         }
       } else {
-        console.log('[useEffect] 设置 currentSentenceIndex:', startFromSentence);
-        setCurrentSentenceIndex(startFromSentence);
+        // 停止：直接更新位置
+        console.log('[useEffect] 设置 currentSentenceIndex:', targetIndex);
+        setCurrentSentenceIndex(targetIndex);
       }
+      // 清除目标
+      targetSentenceRef.current = null;
+      return;
     }
-  }, [startFromSentence, currentSentenceIndex, isPlaying, isPaused]);
+
+    // 没有用户点击时，处理 startFromSentence 初始值
+    if (startFromSentence > 0 && currentSentenceIndex === 0) {
+      console.log('[useEffect] 恢复初始进度:', startFromSentence);
+      setCurrentSentenceIndex(startFromSentence);
+    }
+  }, [startFromSentence, sentences.length, isPlaying, isPaused]);
 
   // 通知父组件播放状态变化
   useEffect(() => {
@@ -427,7 +447,11 @@ export default function ReadAloud({
 
   // 跳转到指定句子并开始朗读
   const handleJumpToSentence = useCallback((index) => {
+    console.log('[handleJumpToSentence] 被调用:', index);
     if (index >= 0 && index < sentences.length) {
+      // 设置用户点击目标，防止 useEffect 重复跳转
+      targetSentenceRef.current = index;
+
       isCancelledRef.current = true;
       window.speechSynthesis.cancel();
       if (audioRef.current) {

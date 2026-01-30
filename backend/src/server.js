@@ -24,10 +24,42 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
+// CORS 配置 - 支持多个域名
+const getCorsOrigin = () => {
+  const allowedOrigins = [
+    'https://readme-bot-seven.vercel.app',
+    'http://localhost:5173',
+    'http://localhost:3000',
+  ];
+  
+  const envOrigin = process.env.CORS_ORIGIN;
+  if (envOrigin) {
+    // 支持逗号分隔的多个域名
+    const envOrigins = envOrigin.split(',').map(origin => origin.trim());
+    allowedOrigins.push(...envOrigins);
+  }
+  
+  return allowedOrigins;
+};
+
 const corsOptions = {
-  origin: process.env.CORS_ORIGIN || '*',
+  origin: function (origin, callback) {
+    // 允许无 origin 的请求（如移动应用、Postman等）
+    if (!origin) return callback(null, true);
+    
+    const allowedOrigins = getCorsOrigin();
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`CORS blocked origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Disposition'],
+  maxAge: 86400, // 24小时
 };
 app.use(cors(corsOptions));
 
