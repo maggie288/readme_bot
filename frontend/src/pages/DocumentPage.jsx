@@ -823,7 +823,7 @@ export default function DocumentPage() {
           </div>
         )}
 
-        {/* View Mode Tabs - 所有文档都显示两种预览模式 */}
+        {/* 视图切换标签 - 只有PDF文档才显示两种视图 */}
         <div className="flex border-b border-gray-200 mb-6">
           <button
             onClick={() => setViewMode('text')}
@@ -835,86 +835,60 @@ export default function DocumentPage() {
           >
             <div className="flex items-center gap-2">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15.536a5 5 0 001.414 1.414m2.828-9.9a9 9 0 012.828-2.828" />
               </svg>
-              文字视图
+              朗读视图
             </div>
             {viewMode === 'text' && (
               <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-black"></div>
             )}
           </button>
-          <button
-            onClick={() => setViewMode('original')}
-            className={`px-4 py-2.5 text-sm font-medium transition-colors relative ${
-              viewMode === 'original'
-                ? 'text-black'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              原始视图
-              {hasPdfPages && (
+          {hasPdfPages && (
+            <button
+              onClick={() => setViewMode('original')}
+              className={`px-4 py-2.5 text-sm font-medium transition-colors relative ${
+                viewMode === 'original'
+                  ? 'text-black'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                PDF视图
                 <span className="px-1.5 py-0.5 text-xs bg-gray-100 text-gray-600 rounded">
                   {document.pdfPages.length} 页
                 </span>
+              </div>
+              {viewMode === 'original' && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-black"></div>
               )}
-            </div>
-            {viewMode === 'original' && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-black"></div>
-            )}
-          </button>
+            </button>
+          )}
         </div>
 
-        {/* Content Area */}
+        {/* 内容区域 */}
         {viewMode === 'text' ? (
           <div className="bg-white">
-            {/* 文字视图：使用 DocumentEditor 显示富文本内容，保留图片、样式、表格 */}
+            {/* 朗读视图：使用 DocumentEditor 显示富文本内容，支持边听边读 */}
             {!(isTwitterSource && contentTab === 'translation' && !translationPurchased) && (
-              <>
-                {(() => {
-                  const contentToRender = contentTab === 'translation' && translatedContent ? translatedContent : editedContent;
-                  console.log('[DocumentPage] DocumentEditor props:', {
-                    contentLength: contentToRender?.length || 0,
-                    editable: isOwner && isEditing && contentTab === 'original',
-                    isReading,
-                    currentSentenceIndex,
-                    readPosition: readingProgress?.listenPosition || 0,
-                    timestamp: new Date().toISOString()
-                  });
-                  return null;
-                })()}
-                <DocumentEditor
-                  content={contentTab === 'translation' && translatedContent ? translatedContent : editedContent}
-                  onChange={contentTab === 'original' ? setEditedContent : undefined}
-                  editable={isOwner && isEditing && contentTab === 'original'}
-                  isReading={isReading}
-                  currentSentenceIndex={currentSentenceIndex}
-                  onSentenceClick={handleSentenceClick}
-                  readPosition={readingProgress?.listenPosition || 0}
-                  onEditorReady={setEditor}
-                />
-              </>
-            )}
-          </div>
-        ) : (
-          <div className="bg-white rounded-lg overflow-hidden" style={{ height: 'calc(100vh - 300px)', minHeight: '600px' }}>
-            {/* 原始视图：根据文档类型显示 */}
-            {hasPdfPages ? (
-              <PDFViewer pages={document.pdfPages} />
-            ) : (
-              /* 没有 PDF 页面的文档，显示只读的富文本编辑器 */
               <DocumentEditor
                 content={contentTab === 'translation' && translatedContent ? translatedContent : editedContent}
-                editable={false}
+                onChange={contentTab === 'original' ? setEditedContent : undefined}
+                editable={isOwner && isEditing && contentTab === 'original'}
                 isReading={isReading}
                 currentSentenceIndex={currentSentenceIndex}
                 onSentenceClick={handleSentenceClick}
                 readPosition={readingProgress?.listenPosition || 0}
+                onEditorReady={setEditor}
               />
             )}
+          </div>
+        ) : (
+          <div className="bg-white rounded-lg overflow-hidden" style={{ height: 'calc(100vh - 300px)', minHeight: '600px' }}>
+            {/* PDF视图：显示PDF内容 */}
+            {hasPdfPages && <PDFViewer pages={document.pdfPages} />}
           </div>
         )}
 
@@ -926,14 +900,12 @@ export default function DocumentPage() {
             </svg>
             <div className="text-sm text-gray-600">
               <p className="font-medium text-gray-700 mb-1">
-                {viewMode === 'text' ? '文字视图' : '原始视图'}
+                {viewMode === 'text' ? '朗读视图' : 'PDF视图'}
               </p>
               <p>
-                {viewMode === 'text' 
-                  ? '此视图优化了阅读体验，支持边听边读功能，保留文档的图片、格式和表格。'
-                  : hasPdfPages 
-                    ? '此视图显示文档的原始排版（包含图片、表格等）。'
-                    : '此视图显示文档的原始富文本格式。'}
+                {viewMode === 'text'
+                  ? '此视图优化了阅读体验，支持边听边读功能，点击句子可跳转。保留文档的图片、格式和表格。'
+                  : '显示PDF原始页面，点击页面可放大查看。'}
               </p>
             </div>
           </div>
