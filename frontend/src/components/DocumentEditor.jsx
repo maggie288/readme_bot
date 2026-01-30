@@ -506,6 +506,19 @@ function ReadableContent({
       ALLOW_DATA_ATTR: true,
     });
 
+    // 调试：如果 content 和 html 不同，记录差异
+    if (html !== content) {
+      console.log('[ReadableContent] DOMPurify 修改了 content!', {
+        originalContent: content,
+        sanitizedHtml: html,
+        originalLength: content.length,
+        sanitizedLength: html.length,
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      console.log('[ReadableContent] DOMPurify 未修改 content');
+    }
+
     console.log('[ReadableContent] DOMPurify 后:', {
       htmlLength: html.length,
       htmlPreview: html.substring(0, 100),
