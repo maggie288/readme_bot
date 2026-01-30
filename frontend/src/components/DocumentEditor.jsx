@@ -596,12 +596,13 @@ function ReadableContent({
       });
 
       html = highlightedHtml;
-    } else if (!isReading && readPositionSentence && readPosition > 0) {
-      // 高亮上次阅读位置
+    } else if (!isReading && readPositionSentence && readPosition >= 0) {
+      // 高亮上次阅读位置或点击位置
       const escapedSentence = readPositionSentence.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const regex = new RegExp(`(${escapedSentence})`, 'g');
       html = html.replace(regex, '<mark class="sentence-highlight bg-blue-100 text-gray-900 rounded px-0.5">$1</mark>');
       console.log('[ReadableContent] 高亮处理 (readPosition):', {
+        readPosition,
         readPositionSentence: readPositionSentence.substring(0, 30),
         timestamp: new Date().toISOString()
       });
