@@ -318,6 +318,64 @@
   }
 }
 
+/* 移动端优化 */
+@media (max-width: 768px) {
+  /* 隐藏桌面端特定的滚动条样式 */
+  ::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+  }
+
+  /* 优化触摸区域 */
+  button {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  /* 优化输入框 */
+  input, textarea {
+    font-size: 16px; /* 防止iOS上输入框缩放 */
+  }
+
+  /* 移动端导航栏动画 */
+  .mobile-nav-enter {
+    transform: translateY(100%);
+  }
+
+  .mobile-nav-enter-active {
+    transform: translateY(0);
+    transition: transform 300ms ease-out;
+  }
+
+  .mobile-nav-exit {
+    transform: translateY(0);
+  }
+
+  .mobile-nav-exit-active {
+    transform: translateY(100%);
+    transition: transform 300ms ease-in;
+  }
+
+  /* 移动端弹窗动画 */
+  .mobile-modal-enter {
+    opacity: 0;
+  }
+
+  .mobile-modal-enter-active {
+    opacity: 1;
+    transition: opacity 200ms ease-out;
+  }
+
+  .mobile-modal-exit {
+    opacity: 1;
+  }
+
+  .mobile-modal-exit-active {
+    opacity: 0;
+    transition: opacity 200ms ease-in;
+  }
+}
+
 /* 编辑器聚焦状态 */
 .tiptap:focus {
   outline: none;

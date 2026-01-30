@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Header from './components/Header';
 import Login from './pages/Login';
 import ResetPassword from './pages/ResetPassword';
@@ -9,7 +9,39 @@ import AlipayPayment from './pages/AlipayPayment';
 import Home from './pages/Home';
 import PublicHome from './pages/PublicHome';
 import DocumentPage from './pages/DocumentPage';
+import MobileDocumentPage from './pages/MobileDocumentPage';
 import Bookshelf from './pages/Bookshelf';
+
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+      const isMobileDevice = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent);
+      const isSmallScreen = window.innerWidth <= 768;
+      setIsMobile(isMobileDevice || isSmallScreen);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  return isMobile;
+}
+
+function MobileDocumentRoute({ children }) {
+  const isMobile = useIsMobile();
+  const location = useLocation();
+  const isDocumentPage = location.pathname.startsWith('/document/');
+
+  if (isMobile && isDocumentPage) {
+    return <MobileDocumentPage />;
+  }
+
+  return children;
+}
 
 function App() {
   const [user, setUser] = useState(null);
@@ -111,7 +143,13 @@ function App() {
           <Route
             path="/document/:id"
             element={
-              user ? <DocumentPage /> : <Navigate to="/login" replace />
+              user ? (
+                <MobileDocumentRoute>
+                  <DocumentPage />
+                </MobileDocumentRoute>
+              ) : (
+                <Navigate to="/login" replace />
+              )
             }
           />
 
