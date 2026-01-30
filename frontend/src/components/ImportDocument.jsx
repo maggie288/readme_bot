@@ -223,22 +223,68 @@ export default function ImportDocument({ isOpen, onClose, onImport }) {
   const handleTwitterImport = () => {
     if (!twitterPreview) return;
 
-    // Convert tweet content to HTML
-    const htmlContent = `
-      <div class="tweet-content">
-        <p>${twitterPreview.content.replace(/\n/g, '<br>')}</p>
-        <p class="tweet-meta" style="color: #666; font-size: 0.9em; margin-top: 1em;">
-          — ${twitterPreview.author} ${twitterPreview.timestamp ? `(${twitterPreview.timestamp})` : ''}
-        </p>
+    let htmlContent = `
+      <div class="tweet-wrapper" style="border: 1px solid #e1e8ed; border-radius: 12px; padding: 16px; max-width: 550px;">
+        <div class="tweet-header" style="display: flex; align-items: center; margin-bottom: 12px;">
+          ${twitterPreview.avatar ? `
+            <img src="${twitterPreview.avatar}" alt="${twitterPreview.author}" style="width: 48px; height: 48px; border-radius: 50%; margin-right: 12px;">
+          ` : `
+            <div style="width: 48px; height: 48px; border-radius: 50%; background: #1da1f2; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 20px; margin-right: 12px;">
+              ${twitterPreview.author?.[0]?.toUpperCase() || 'X'}
+            </div>
+          `}
+          <div>
+            <div style="font-weight: bold; color: #0f1419;">${twitterPreview.author}</div>
+            <div style="color: #536471; font-size: 14px;">@${twitterPreview.authorUsername || ''}</div>
+          </div>
+        </div>
+        <div class="tweet-body" style="font-size: 16px; line-height: 1.5; color: #0f1419; margin-bottom: 12px;">
+          ${twitterPreview.formattedContent || twitterPreview.content?.replace(/\n/g, '<br>') || ''}
+        </div>
+    `;
+
+    if (twitterPreview.images && twitterPreview.images.length > 0) {
+      htmlContent += `
+        <div class="tweet-images" style="display: grid; grid-template-columns: repeat(${twitterPreview.images.length > 1 ? '2' : '1'}, 1fr); gap: 8px; margin-bottom: 12px; border-radius: 12px; overflow: hidden;">
+          ${twitterPreview.images.map(img => `
+            <img src="${img}" alt="Tweet image" style="width: 100%; height: 200px; object-fit: cover;">
+          `).join('')}
+        </div>
+      `;
+    }
+
+    htmlContent += `
+        <div class="tweet-meta" style="color: #536471; font-size: 14px; padding-top: 12px; border-top: 1px solid #eff3f4;">
+          ${twitterPreview.timestamp ? new Date(twitterPreview.timestamp).toLocaleString('zh-CN') : ''}
+        </div>
+        <div class="tweet-stats" style="display: flex; gap: 16px; color: #536471; font-size: 14px; margin-top: 8px;">
+          <span>💬 ${twitterPreview.replies || 0}</span>
+          <span>🔄 ${twitterPreview.retweets || 0}</span>
+          <span>❤️ ${twitterPreview.likes || 0}</span>
+        </div>
       </div>
     `;
 
+    if (twitterPreview.thread && twitterPreview.thread.length > 0) {
+      htmlContent += `
+        <div class="tweet-thread" style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #e1e8ed;">
+          <div style="font-weight: 600; margin-bottom: 12px; color: #536471;">对话线程</div>
+          ${twitterPreview.thread.map(t => `
+            <div class="thread-item" style="padding: 12px 0; border-bottom: 1px solid #f7f9f9;">
+              <div style="font-weight: bold; font-size: 14px;">${t.author}</div>
+              <div style="color: #0f1419; margin-top: 4px;">${t.formattedContent || t.content}</div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
     showConfirmStep({
-      title: `Tweet by ${twitterPreview.author}`,
+      title: twitterPreview.content?.substring(0, 50) + '...' || 'Tweet',
       content: htmlContent,
       sourceType: 'twitter',
       sourceUrl: twitterPreview.originalUrl,
-      originalContent: twitterPreview.content, // Keep original for translation
+      originalContent: twitterPreview.content,
     });
   };
 
@@ -530,27 +576,58 @@ export default function ImportDocument({ isOpen, onClose, onImport }) {
                 {/* 推文预览 */}
                 {twitterPreview && (
                   <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-full bg-black flex items-center justify-center text-white font-bold">
-                        {twitterPreview.author?.[0]?.toUpperCase() || 'X'}
-                      </div>
+                    <div className="flex items-start gap-3 mb-3">
+                      {twitterPreview.avatar ? (
+                        <img src={twitterPreview.avatar} alt="" className="w-12 h-12 rounded-full" />
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-black flex items-center justify-center text-white font-bold text-lg">
+                          {twitterPreview.author?.[0]?.toUpperCase() || 'X'}
+                        </div>
+                      )}
                       <div className="flex-1">
                         <p className="font-semibold text-gray-900">{twitterPreview.author}</p>
+                        <p className="text-sm text-gray-500">@{twitterPreview.authorUsername}</p>
                         {twitterPreview.timestamp && (
-                          <p className="text-xs text-gray-500">{twitterPreview.timestamp}</p>
-                        )}
-                        <p className="mt-2 text-gray-800 whitespace-pre-wrap">{twitterPreview.content}</p>
-                        {twitterPreview.likes !== undefined && (
-                          <div className="mt-3 flex items-center gap-4 text-sm text-gray-500">
-                            <span>{twitterPreview.likes} likes</span>
-                            <span>{twitterPreview.retweets} retweets</span>
-                          </div>
+                          <p className="text-xs text-gray-400 mt-1">
+                            {new Date(twitterPreview.timestamp).toLocaleString('zh-CN')}
+                          </p>
                         )}
                       </div>
                     </div>
+
+                    <div className="text-gray-800 text-base leading-relaxed mb-3">
+                      {twitterPreview.formattedContent ? (
+                        <div dangerouslySetInnerHTML={{ __html: twitterPreview.formattedContent }} />
+                      ) : (
+                        <p className="whitespace-pre-wrap">{twitterPreview.content}</p>
+                      )}
+                    </div>
+
+                    {twitterPreview.images && twitterPreview.images.length > 0 && (
+                      <div className="grid grid-cols-2 gap-2 mb-3">
+                        {twitterPreview.images.slice(0, 4).map((img, idx) => (
+                          <img key={idx} src={img} alt="" className="w-full h-32 object-cover rounded-lg" />
+                        ))}
+                      </div>
+                    )}
+
+                    {twitterPreview.likes !== undefined && (
+                      <div className="flex items-center gap-4 text-sm text-gray-500 py-2 border-t border-gray-200">
+                        <span>💬 {twitterPreview.replies || 0}</span>
+                        <span>🔄 {twitterPreview.retweets || 0}</span>
+                        <span>❤️ {twitterPreview.likes || 0}</span>
+                      </div>
+                    )}
+
+                    {twitterPreview.thread && twitterPreview.thread.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-gray-200">
+                        <p className="text-xs text-gray-500 mb-2">包含 {twitterPreview.thread.length} 条回复</p>
+                      </div>
+                    )}
+
                     <button
                       onClick={handleTwitterImport}
-                      className="mt-4 w-full px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                      className="mt-3 w-full px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
                     >
                       导入此推文
                     </button>
