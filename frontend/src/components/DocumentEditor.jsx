@@ -895,12 +895,34 @@ export default function DocumentEditor({
       )}
 
       {/* 阅读模式提示 */}
-      {showReadableView && (
+      {showReadableView && !editable && (
         <div className="mb-4 p-2 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700 flex items-center gap-2">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <span>点击任意句子可从该位置开始朗读</span>
+        </div>
+      )}
+
+      {/* 编辑模式下的朗读提示 */}
+      {showReadableView && editable && (
+        <div className="mb-4 p-2 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-700 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15.536a5 5 0 001.414 1.414m2.828-9.9a9 9 0 012.828-2.828" />
+            </svg>
+            <span>朗读中，点击任意句子可跳转</span>
+          </div>
+          <button
+            onClick={() => {
+              if (onSentenceClick) {
+                onSentenceClick(-1); // -1 表示停止朗读
+              }
+            }}
+            className="px-3 py-1 bg-yellow-200 hover:bg-yellow-300 rounded text-yellow-800 text-xs"
+          >
+            停止朗读
+          </button>
         </div>
       )}
 
