@@ -101,12 +101,15 @@ export default function ReadAloud({
     if (jumpToTarget < 0 || jumpToTarget >= sentences.length) return;
 
     console.log('[ReadAloud] 检测到外部跳转目标:', jumpToTarget);
-    handleJumpToSentence(jumpToTarget);
+    // 使用 ref 调用，避免依赖问题
+    if (handleJumpToSentenceRef.current) {
+      handleJumpToSentenceRef.current(jumpToTarget);
+    }
     // 清除跳转目标
     if (setJumpToTarget) {
       setJumpToTarget(null);
     }
-  }, [jumpToTarget, sentences.length, handleJumpToSentence, setJumpToTarget]);
+  }, [jumpToTarget, sentences.length, setJumpToTarget]);
 
   // 自定义声音相关状态
   const [useCustomVoice, setUseCustomVoice] = useState(false);
@@ -470,11 +473,6 @@ export default function ReadAloud({
       // 设置用户点击目标，防止 useEffect 重复跳转
       targetSentenceRef.current = index;
 
-      // 通知外部（用于调试或其他用途）
-      if (onJumpToSentence) {
-        onJumpToSentence(index);
-      }
-
       isCancelledRef.current = true;
       window.speechSynthesis.cancel();
       if (audioRef.current) {
@@ -494,7 +492,7 @@ export default function ReadAloud({
         }
       }, 100);
     }
-  }, [sentences.length, speakSentence, speakWithCustomVoice, useCustomVoice, customVoiceInfo, onJumpToSentence]);
+  }, [sentences.length, speakSentence, speakWithCustomVoice, useCustomVoice, customVoiceInfo]);
 
   // 更新 ref 以供 useEffect 使用
   useEffect(() => {
