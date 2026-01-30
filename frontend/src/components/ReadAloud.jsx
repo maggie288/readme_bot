@@ -32,10 +32,27 @@ export function splitIntoSentences(html) {
   let lastIndex = 0;
   let i = 0;
   
+  console.log('[splitIntoSentences] 开始分割循环:', {
+    textLength: text.length,
+    textPreview: text,
+    timestamp: new Date().toISOString()
+  });
+  
   while (i < text.length) {
     const char = text[i];
     const isSentenceEnd = /[。！？.!?]/.test(char);
     const isComma = char === '，' || char === ',';
+    
+    console.log('[splitIntoSentences] 循环中:', {
+      i,
+      char,
+      charCode: char.charCodeAt(0),
+      isSentenceEnd,
+      isComma,
+      lastIndex,
+      sentencesLength: sentences.length,
+      timestamp: new Date().toISOString()
+    });
     
     if (isSentenceEnd || isComma) {
       // 找到分割符，提取前面的文本作为句子
@@ -44,12 +61,23 @@ export function splitIntoSentences(html) {
       // 清理句子末尾的分隔符
       const cleanedSentence = sentence.replace(/[，,。！？.!?]+$/, '').trim();
       
+      console.log('[splitIntoSentences] 找到分割符:', {
+        i,
+        char,
+        rawSentence: sentence,
+        cleanedSentence,
+        cleanedLength: cleanedSentence.length,
+        willAdd: cleanedSentence.length > 2,
+        timestamp: new Date().toISOString()
+      });
+      
       if (cleanedSentence.length > 2) {
         sentences.push(cleanedSentence);
-        console.log('[splitIntoSentences] 分割出句子:', {
+        console.log('[splitIntoSentences] 添加句子:', {
           sentence: cleanedSentence,
           sentenceLength: cleanedSentence.length,
           splitBy: isSentenceEnd ? 'sentenceEnd' : 'comma',
+          sentencesNow: sentences.length,
           timestamp: new Date().toISOString()
         });
       }
@@ -62,11 +90,22 @@ export function splitIntoSentences(html) {
   
   // 添加最后一个句子（从最后一个分割符到文本末尾）
   const lastSentence = text.substring(lastIndex).trim();
+  
+  console.log('[splitIntoSentences] 处理最后句子:', {
+    lastIndex,
+    lastSentence,
+    lastSentenceLength: lastSentence.length,
+    willAdd: lastSentence.length > 2,
+    sentencesLengthBefore: sentences.length,
+    timestamp: new Date().toISOString()
+  });
+  
   if (lastSentence.length > 2) {
     sentences.push(lastSentence);
-    console.log('[splitIntoSentences] 最后句子:', {
+    console.log('[splitIntoSentences] 添加最后句子:', {
       lastSentence,
       lastSentenceLength: lastSentence.length,
+      sentencesNow: sentences.length,
       timestamp: new Date().toISOString()
     });
   }
