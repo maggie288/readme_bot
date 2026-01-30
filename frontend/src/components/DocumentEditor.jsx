@@ -457,6 +457,8 @@ function splitHtmlBySentences(html) {
   // 句子最小长度（与 splitIntoSentences 一致）
   const MIN_SENTENCE_LENGTH = 5;
 
+  const debugSentences = [];
+
   // 递归处理节点
   const processNode = (node, parentFragment) => {
     if (node.nodeType === Node.TEXT_NODE) {
@@ -483,9 +485,11 @@ function splitHtmlBySentences(html) {
             const span = document.createElement('span');
             span.className = 'sentence-segment cursor-pointer hover:bg-gray-100 transition-colors px-0.5 rounded';
             span.textContent = part;
+            debugSentences.push(`[TEXT] ${part.substring(0, 30)}`);
             parentFragment.appendChild(span);
           } else {
             // 太短的句子不创建 span，直接添加文本
+            debugSentences.push(`[SKIP] ${part.substring(0, 20)} (len=${cleaned.length})`);
             parentFragment.appendChild(document.createTextNode(part));
           }
         }
@@ -512,6 +516,7 @@ function splitHtmlBySentences(html) {
     processNode(node, fragment);
   });
 
+  console.log('[splitHtmlBySentences] 生成的句子:', debugSentences);
   return fragment;
 }
 
