@@ -37,6 +37,7 @@ model User {
   notes                Note[]
   purchases            Purchase[]            // 用户购买的文档
   translationPurchases TranslationPurchase[] // 翻译购买记录
+  recharges            Recharge[]            // 充值记录
 }
 
 model Document {
@@ -147,4 +148,21 @@ model TranslationPurchase {
   @@unique([userId, documentId]) // 每个用户只能购买一次同一文档的翻译
   @@index([userId])
   @@index([documentId])
+}
+
+// 充值记录
+model Recharge {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  amount      Float    // 充值金额
+  status      String   @default("pending") // pending, success, failed
+  tradeNo     String?  // 支付宝交易号
+  alipayOrderId String? // 支付宝订单号
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tradeNo])
 }

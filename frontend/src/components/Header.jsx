@@ -10,7 +10,6 @@ export default function Header({ documentTitle, user, onLogout, showDocTitle = t
   const [rechargeAmount, setRechargeAmount] = useState('');
   const [recharging, setRecharging] = useState(false);
 
-  // 获取最新余额
   useEffect(() => {
     if (user) {
       loadBalance();
@@ -35,19 +34,13 @@ export default function Header({ documentTitle, user, onLogout, showDocTitle = t
 
     setRecharging(true);
     try {
-      const res = await authAPI.addBalance(amount);
-      setBalance(res.data.balance);
-      setShowRecharge(false);
-      setRechargeAmount('');
-      alert(res.data.message);
-      // 更新本地存储的用户信息
-      const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
-      storedUser.balance = res.data.balance;
-      localStorage.setItem('user', JSON.stringify(storedUser));
-      if (onUserUpdate) onUserUpdate(storedUser);
+      const res = await authAPI.createAlipayOrder(amount);
+      if (res.data.payUrl) {
+        window.location.href = res.data.payUrl;
+      }
     } catch (error) {
-      console.error('Recharge error:', error);
-      alert('充值失败');
+      console.error('Create order error:', error);
+      alert('创建订单失败');
     } finally {
       setRecharging(false);
     }
@@ -107,6 +100,31 @@ export default function Header({ documentTitle, user, onLogout, showDocTitle = t
                   </svg>
                   <span className="font-medium">¥{balance.toFixed(2)}</span>
                 </button>
+
+                <div className="flex items-center gap-2">
+                  <div className="relative group">
+                    <button className="flex items-center gap-1 text-gray-600 hover:text-gray-900 transition-colors text-sm">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                      <span>账户</span>
+                    </button>
+                    <div className="absolute right-0 top-full mt-1 w-40 bg-white rounded-lg shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                      <Link
+                        to="/recharge-history"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                      >
+                        充值记录
+                      </Link>
+                      <Link
+                        to="/purchase-history"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                      >
+                        购买记录
+                      </Link>
+                    </div>
+                  </div>
+                </div>
 
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-2">
@@ -214,7 +232,7 @@ export default function Header({ documentTitle, user, onLogout, showDocTitle = t
               </button>
 
               <p className="mt-4 text-xs text-gray-400 text-center">
-                注：这是演示功能，充值金额仅用于测试
+                充值金额将使用支付宝支付（扫码支付）
               </p>
             </div>
           </div>

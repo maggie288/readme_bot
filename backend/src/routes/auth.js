@@ -254,4 +254,197 @@ router.post('/add-balance', authenticateToken, validate(addBalanceSchema), async
   }
 });
 
+// Get recharge history
+router.get('/recharges', authenticateToken, async (req, res) => {
+  try {
+    const recharges = await prisma.recharge.findMany({
+      where: { userId: req.user.id },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+
+    res.json(recharges);
+  } catch (error) {
+    console.error('Get recharges error:', error);
+    res.status(500).json({ error: 'Failed to get recharge history' });
+  }
+});
+
+// Create Alipay order
+router.post('/alipay/create-order', authenticateToken, async (req, res) => {
+  try {
+    const { amount } = req.body;
+
+    if (!amount || amount <= 0) {
+      return res.status(400).json({ error: 'Invalid amount' });
+    }
+
+    // 创建充值记录
+    const recharge = await prisma.recharge.create({
+      data: {
+        userId: req.user.id,
+        amount,
+        status: 'pending',
+      },
+    });
+
+    // 生成支付宝订单（模拟）
+    // 实际项目中需要调用支付宝 API
+    const orderId = `RECHARGE_${recharge.id}_${Date.now()}`;
+    const tradeNo = `TRADE_${Date.now()}`;
+
+    // 更新充值记录的订单号
+    await prisma.recharge.update({
+      where: { id: recharge.id },
+      data: { alipayOrderId: orderId },
+    });
+
+    // 模拟支付宝返回的支付链接
+    // 实际项目中这里会调用支付宝的 alipay.trade.page.pay 接口
+    const payUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment/alipay?orderId=${orderId}&amount=${amount}&tradeNo=${tradeNo}`;
+
+    res.json({
+      success: true,
+      orderId,
+      tradeNo,
+      payUrl,
+      amount,
+    });
+  } catch (error) {
+    console.error('Create Alipay order error:', error);
+    res.status(500).json({ error: 'Failed to create payment order' });
+  }
+});
+
+// Alipay callback (notify)
+router.post('/alipay/notify', async (req, res) => {
+  try {
+    const { tradeNo, orderId, status } = req.body;
+
+    // 查找充值记录
+    const recharge = await prisma.recharge.findFirst({
+      where: { alipayOrderId: orderId },
+    });
+
+    if (!recharge) {
+      return res.status(404).json({ error: 'Recharge not found' });
+    }
+
+    if (status === 'success') {
+      // 更新充值状态
+      await prisma.recharge.update({
+        where: { id: recharge.id },
+        data: {
+          status: 'success',
+          tradeNo,
+        },
+      });
+
+      // 增加用户余额
+      await prisma.user.update({
+        where: { id: recharge.userId },
+        data: { balance: { increment: recharge.amount } },
+      });
+    } else {
+      await prisma.recharge.update({
+        where: { id: recharge.id },
+        data: { status: 'failed' },
+      });
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Alipay notify error:', error);
+    res.status(500).json({ error: 'Payment processing failed' });
+  }
+});
+
+// Mock Alipay payment success (for demo/testing)
+router.post('/alipay/mock-success', authenticateToken, async (req, res) => {
+  try {
+    const { orderId } = req.body;
+
+    const recharge = await prisma.recharge.findFirst({
+      where: { alipayOrderId: orderId, userId: req.user.id },
+    });
+
+    if (!recharge) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    // 更新充值状态
+    await prisma.recharge.update({
+      where: { id: recharge.id },
+      data: {
+        status: 'success',
+        tradeNo: `MOCK_${Date.now()}`,
+      },
+    });
+
+    // 增加用户余额
+    const user = await prisma.user.update({
+      where: { id: recharge.userId },
+      data: { balance: { increment: recharge.amount } },
+      select: {
+        id: true,
+        username: true,
+        balance: true,
+      },
+    });
+
+    res.json({
+      success: true,
+      message: '充值成功',
+      balance: user.balance,
+    });
+  } catch (error) {
+    console.error('Mock payment success error:', error);
+    res.status(500).json({ error: 'Payment failed' });
+  }
+});
+
+// Get purchase history
+router.get('/purchases', authenticateToken, async (req, res) => {
+  try {
+    const purchases = await prisma.purchase.findMany({
+      where: { userId: req.user.id },
+      include: {
+        document: {
+          select: {
+            id: true,
+            title: true,
+            authorId: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+
+    // 获取翻译购买记录
+    const translationPurchases = await prisma.translationPurchase.findMany({
+      where: { userId: req.user.id },
+      include: {
+        document: {
+          select: {
+            id: true,
+            title: true,
+            authorId: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+
+    res.json({
+      documents: purchases,
+      translations: translationPurchases,
+    });
+  } catch (error) {
+    console.error('Get purchases error:', error);
+    res.status(500).json({ error: 'Failed to get purchase history' });
+  }
+});
+
 export default router;

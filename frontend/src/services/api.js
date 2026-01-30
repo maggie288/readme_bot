@@ -23,6 +23,10 @@ export const authAPI = {
   addBalance: (amount) => api.post('/auth/add-balance', { amount }),
   forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
   resetPassword: (data) => api.post('/auth/reset-password', data),
+  getRecharges: () => api.get('/auth/recharges'),
+  getPurchases: () => api.get('/auth/purchases'),
+  createAlipayOrder: (amount) => api.post('/auth/alipay/create-order', { amount }),
+  mockAlipaySuccess: (orderId) => api.post('/auth/alipay/mock-success', { orderId }),
 };
 
 // Documents API

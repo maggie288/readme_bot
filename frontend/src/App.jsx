@@ -3,6 +3,9 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Header from './components/Header';
 import Login from './pages/Login';
 import ResetPassword from './pages/ResetPassword';
+import RechargeHistory from './pages/RechargeHistory';
+import PurchaseHistory from './pages/PurchaseHistory';
+import AlipayPayment from './pages/AlipayPayment';
 import Home from './pages/Home';
 import PublicHome from './pages/PublicHome';
 import DocumentPage from './pages/DocumentPage';
@@ -70,6 +73,25 @@ function App() {
           <Route
             path="/reset-password"
             element={<ResetPassword />}
+          />
+
+          <Route
+            path="/recharge-history"
+            element={
+              user ? <RechargeHistory /> : <Navigate to="/login" replace />
+            }
+          />
+
+          <Route
+            path="/purchase-history"
+            element={
+              user ? <PurchaseHistory /> : <Navigate to="/login" replace />
+            }
+          />
+
+          <Route
+            path="/payment/alipay"
+            element={<AlipayPayment />}
           />
 
           {/* Public homepage for non-logged in users */}
