@@ -15,6 +15,7 @@ import { TextAlign } from '@tiptap/extension-text-align';
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { splitIntoSentences } from './ReadAloud';
 import DOMPurify from 'dompurify';
+import { uploadAPI } from '../services/api';
 
 // 编辑器工具栏组件 - 可独立使用
 export function EditorToolbar({ editor }) {
@@ -830,6 +831,40 @@ export default function DocumentEditor({
       if (onChange) {
         onChange(editor.getHTML());
       }
+    },
+    editorProps: {
+      handlePaste: (view, event, slice) => {
+        const items = event.clipboardData?.items;
+        if (!items) return false;
+
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i];
+          if (item.type.indexOf('image') === 0) {
+            event.preventDefault();
+            const file = item.getAsFile();
+            if (file) {
+              uploadAPI.uploadImage(file)
+                .then(response => {
+                  if (response.data.url) {
+                    const { schema } = view.state;
+                    const coordinates = view.posAtCoords({ left: event.clientX, top: event.clientY });
+                    if (coordinates) {
+                      const node = schema.nodes.image.create({ src: response.data.url });
+                      const transaction = schema.tr.replaceWith(coordinates.pos, coordinates.pos, node);
+                      view.dispatch(transaction);
+                    }
+                  }
+                })
+                .catch(error => {
+                  console.error('Upload image error:', error);
+                  alert('图片上传失败，请重试');
+                });
+            }
+            return true;
+          }
+        }
+        return false;
+      },
     },
   });
 
