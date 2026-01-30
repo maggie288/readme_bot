@@ -323,10 +323,10 @@ export default function DocumentPage() {
     }
   }, []);
 
-  // 处理播放状态变化
+  // 处理播放状态变化 - 同步 ReadAloud 的状态到父组件
   const handlePlayStateChange = useCallback(({ isPlaying, isPaused, currentSentenceIndex: idx }) => {
     setIsReading(isPlaying || isPaused);
-    if (idx >= 0) {
+    if (typeof idx === 'number' && idx >= 0) {
       setCurrentSentenceIndex(idx);
     }
   }, []);
