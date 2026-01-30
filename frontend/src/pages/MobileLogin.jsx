@@ -1,6 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { logoutAPI } from '../services/api';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 export default function MobileLogin({ onLogin }) {
   const navigate = useNavigate();
@@ -98,12 +97,12 @@ export default function MobileLogin({ onLogin }) {
           </form>
 
           <div className="mt-6 text-center">
-            <a
-              href="/m/register"
+            <button
+              onClick={() => navigate('/login', { state: { isRegister: true } })}
               className="text-sm text-blue-500 hover:text-blue-600"
             >
               还没有账号？立即注册
-            </a>
+            </button>
           </div>
         </div>
       </div>

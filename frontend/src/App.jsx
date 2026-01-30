@@ -14,6 +14,7 @@ import MobileHome from './pages/MobileHome';
 import MobileLogin from './pages/MobileLogin';
 import MobileBookshelf from './pages/MobileBookshelf';
 import Bookshelf from './pages/Bookshelf';
+import ImportDocument from './components/ImportDocument';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -181,6 +182,14 @@ function App() {
 
             <Route path="/m/bookshelf" element={
               user ? <MobileBookshelf user={user} onLogout={handleLogout} /> : <Navigate to="/m/login" replace />
+            } />
+
+            <Route path="/m/import" element={
+              user ? <ImportDocument /> : <Navigate to="/m/login" replace />
+            } />
+
+            <Route path="/m/profile" element={
+              user ? <MobileHome user={user} onLogout={handleLogout} /> : <Navigate to="/m/login" replace />
             } />
 
             <Route path="/login" element={
