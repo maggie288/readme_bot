@@ -59,7 +59,7 @@ export default function MobileDocumentPage() {
   useEffect(() => {
     loadDocument();
     return () => {
-      if (speechSynthesisRef.current) {
+      if (typeof window !== 'undefined' && speechSynthesisRef.current) {
         window.speechSynthesis.cancel();
       }
     };
@@ -67,9 +67,17 @@ export default function MobileDocumentPage() {
 
   const splitIntoSentences = useCallback((html) => {
     if (!html || typeof html !== 'string') return [];
-    const div = document.createElement('div');
-    div.innerHTML = html;
-    let text = div.textContent || div.innerText || '';
+    
+    let text = html;
+    
+    if (typeof document !== 'undefined') {
+      const div = document.createElement('div');
+      div.innerHTML = html;
+      text = div.textContent || div.innerText || '';
+    } else {
+      text = html.replace(/<[^>]*>/g, '');
+    }
+    
     text = text.replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim();
     if (!text) return [];
     let sentences = text
@@ -115,7 +123,7 @@ export default function MobileDocumentPage() {
   };
 
   const startReading = () => {
-    if ('speechSynthesis' in window) {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel();
       setIsReading(true);
       setCurrentSentenceIndex(0);
@@ -124,14 +132,14 @@ export default function MobileDocumentPage() {
   };
 
   const stopReading = () => {
-    if ('speechSynthesis' in window) {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel();
     }
     setIsReading(false);
   };
 
   const speakSentence = useCallback((index) => {
-    if (index >= sentences.length || !isReading) return;
+    if (typeof window === 'undefined' || index >= sentences.length || !isReading) return;
     const sentence = sentences[index];
     const utterance = new SpeechSynthesisUtterance(sentence);
     utterance.lang = 'zh-CN';
@@ -151,11 +159,10 @@ export default function MobileDocumentPage() {
   }, [sentences, isReading]);
 
   const speakCurrentSentence = () => {
-    if (sentences[currentSentenceIndex]) {
-      const utterance = new SpeechSynthesisUtterance(sentences[currentSentenceIndex]);
-      utterance.lang = 'zh-CN';
-      window.speechSynthesis.speak(utterance);
-    }
+    if (typeof window === 'undefined' || !sentences[currentSentenceIndex]) return;
+    const utterance = new SpeechSynthesisUtterance(sentences[currentSentenceIndex]);
+    utterance.lang = 'zh-CN';
+    window.speechSynthesis.speak(utterance);
   };
 
   const goToPrevSentence = () => {
@@ -163,7 +170,9 @@ export default function MobileDocumentPage() {
     setCurrentSentenceIndex(newIndex);
     scrollToSentence(newIndex);
     if (isReading) {
-      window.speechSynthesis.cancel();
+      if (typeof window !== 'undefined') {
+        window.speechSynthesis.cancel();
+      }
       speakSentence(newIndex);
     }
   };
@@ -173,7 +182,9 @@ export default function MobileDocumentPage() {
     setCurrentSentenceIndex(newIndex);
     scrollToSentence(newIndex);
     if (isReading) {
-      window.speechSynthesis.cancel();
+      if (typeof window !== 'undefined') {
+        window.speechSynthesis.cancel();
+      }
       speakSentence(newIndex);
     }
   };

@@ -20,6 +20,8 @@ function useIsMobile() {
 
   useEffect(() => {
     const checkMobile = () => {
+      if (typeof window === 'undefined') return;
+
       const urlParams = new URLSearchParams(window.location.search);
       const viewMode = urlParams.get('view');
 
