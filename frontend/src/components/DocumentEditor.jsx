@@ -441,79 +441,67 @@ export function EditorToolbar({ editor }) {
   );
 }
 
-// 将文本按句子分割，返回句子数组和位置映射
-function segmentTextBySentences(text) {
-  if (!text || !text.trim()) return { sentences: [], positions: [] };
+// 将HTML内容按句子分割，每个句子包装成可点击的元素
+function splitHtmlBySentences(html) {
+  if (!html || !html.trim()) return '';
 
-  const sentences = [];
-  const positions = [];
-  let lastIndex = 0;
-
-  // 中英文句末符
-  const endPattern = /[。！？.!?]/g;
-  let match;
-
-  while ((match = endPattern.exec(text)) !== null) {
-    const sentence = text.substring(lastIndex, match.index + 1).trim();
-    if (sentence.length > 0) {
-      sentences.push(sentence);
-      positions.push({ start: lastIndex, end: match.index + 1 });
-    }
-    lastIndex = match.index + 1;
-  }
-
-  // 处理最后一段
-  const lastSentence = text.substring(lastIndex).trim();
-  if (lastSentence.length > 0) {
-    sentences.push(lastSentence);
-    positions.push({ start: lastIndex, end: text.length });
-  }
-
-  return { sentences, positions };
-}
-
-// 在HTML中查找句子的位置（考虑HTML标签）
-function findSentenceInHtml(html, sentence) {
-  // 创建临时DOM
   const tempDiv = document.createElement('div');
   tempDiv.innerHTML = html;
 
-  // 获取纯文本
-  const htmlText = tempDiv.textContent || tempDiv.innerText || '';
+  const fragment = document.createDocumentFragment();
 
-  // 在纯文本中查找句子
-  const normalizedHtmlText = htmlText.replace(/\s+/g, ' ').trim();
-  const normalizedSentence = sentence.replace(/\s+/g, ' ').trim();
+  // 句子边界正则：中英文句末符
+  const sentenceEndPattern = /([。！？.!?]+)/g;
 
-  const index = normalizedHtmlText.indexOf(normalizedSentence);
-  if (index < 0) return null;
+  // 递归处理节点
+  const processNode = (node, parentFragment) => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const text = node.textContent;
+      if (!text.trim()) {
+        parentFragment.appendChild(document.createTextNode(text));
+        return;
+      }
 
-  // 找到在纯文本中的位置后，映射回HTML
-  // 遍历HTML找到对应的位置
-  let htmlIndex = 0;
-  let textIndex = 0;
-  let tagDepth = 0;
+      // 按句子边界分割
+      const parts = text.split(sentenceEndPattern);
 
-  for (let i = 0; i < html.length; i++) {
-    const char = html[i];
+      parts.forEach((part, index) => {
+        if (!part) return;
 
-    if (char === '<') {
-      // 跳过标签
-      while (i < html.length && html[i] !== '>') i++;
-      continue;
+        // 如果是分隔符（句末标点），直接添加
+        if (part.match(/^[。！？.!?]+$/)) {
+          parentFragment.appendChild(document.createTextNode(part));
+        } else if (part.trim()) {
+          // 如果是句子文本，创建可点击的 span
+          const span = document.createElement('span');
+          span.className = 'sentence-segment cursor-pointer hover:bg-gray-100 transition-colors px-0.5 rounded';
+          span.textContent = part;
+          parentFragment.appendChild(span);
+        }
+      });
+    } else if (node.nodeType === Node.ELEMENT_NODE) {
+      // 保留原有标签，创建新元素
+      const newElement = document.createElement(node.tagName);
+
+      // 复制原有属性
+      Array.from(node.attributes).forEach(attr => {
+        newElement.setAttribute(attr.name, attr.value);
+      });
+
+      // 递归处理子节点
+      Array.from(node.childNodes).forEach(child => {
+        processNode(child, newElement);
+      });
+
+      parentFragment.appendChild(newElement);
     }
+  };
 
-    if (textIndex === index) {
-      // 找到起始位置
-      return { start: i };
-    }
+  Array.from(tempDiv.childNodes).forEach(node => {
+    processNode(node, fragment);
+  });
 
-    if (char !== ' ' && char !== '\n' && char !== '\t') {
-      textIndex++;
-    }
-  }
-
-  return null;
+  return fragment;
 }
 
 // 可朗读内容组件 - 渲染完整HTML内容，支持句子高亮和点击
@@ -524,147 +512,87 @@ function ReadableContent({
   isReading,
   readPosition = 0
 }) {
-  const sentences = useMemo(() => {
-    return splitIntoSentences(content || '');
-  }, [content]);
-
   const containerRef = useRef(null);
 
-  // 处理HTML内容，高亮当前句子
-  const processedContent = useMemo(() => {
+  // 生成带句子索引的文档片段
+  const documentFragment = useMemo(() => {
     if (!content || content.trim() === '' || content === '<p></p>') {
-      return '';
+      return null;
     }
 
-    let html = DOMPurify.sanitize(content, {
-      ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 's', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-        'ul', 'ol', 'li', 'blockquote', 'pre', 'code', 'a', 'img', 'table', 'thead', 'tbody',
-        'tr', 'th', 'td', 'mark', 'span', 'div', 'hr', 'input', 'figure', 'figcaption'],
-      ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class', 'target', 'rel', 'width', 'height',
-        'type', 'checked', 'disabled', 'data-type', 'data-checked', 'style'],
-      ALLOW_DATA_ATTR: true,
+    return splitHtmlBySentences(content);
+  }, [content]);
+
+  // 为句子添加索引
+  useEffect(() => {
+    if (!containerRef.current || !documentFragment) return;
+
+    // 将片段添加到容器
+    containerRef.current.innerHTML = '';
+    containerRef.current.appendChild(documentFragment.cloneNode(true));
+
+    // 为所有句子元素添加索引
+    const sentenceSegments = containerRef.current.querySelectorAll('.sentence-segment');
+    sentenceSegments.forEach((segment, index) => {
+      segment.setAttribute('data-sentence-index', index);
+    });
+  }, [documentFragment]);
+
+  // 高亮当前句子
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    // 移除之前的高亮
+    const allSegments = containerRef.current.querySelectorAll('.sentence-segment');
+    allSegments.forEach(seg => {
+      seg.classList.remove('bg-yellow-300', 'text-gray-900');
+      if (!isReading) {
+        seg.classList.remove('bg-blue-100');
+      }
     });
 
-    // 高亮当前朗读的句子或阅读位置
-    const targetSentence = isReading && currentSentenceIndex >= 0
-      ? sentences[currentSentenceIndex]
-      : (readPosition > 0 ? sentences[readPosition] : null);
-
-    if (!targetSentence) return html;
-
-    // 规范化句子用于匹配
-    const normalizedSentence = targetSentence.replace(/\s+/g, ' ').trim();
-    if (!normalizedSentence) return html;
-
-    // 使用更可靠的方法：在临时div中处理
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = html;
-
-    // 递归处理所有文本节点
-    const processNode = (node) => {
-      if (node.nodeType === Node.TEXT_NODE) {
-        const text = node.textContent;
-        const normalizedText = text.replace(/\s+/g, ' ');
-
-        if (normalizedText.includes(normalizedSentence)) {
-          // 找到匹配的文本，进行替换
-          const parts = normalizedText.split(normalizedSentence);
-          if (parts.length >= 2) {
-            // 构建新的HTML
-            const parent = node.parentNode;
-            const beforeText = text.substring(0, parts[0].length);
-            const afterText = text.substring(parts[0].length + normalizedSentence.length - 1);
-
-            if (beforeText) {
-              parent.insertBefore(document.createTextNode(beforeText), node);
-            }
-
-            const mark = document.createElement('mark');
-            mark.className = 'sentence-highlight bg-yellow-300 text-gray-900 rounded px-0.5';
-            mark.setAttribute('data-index', currentSentenceIndex);
-            mark.textContent = normalizedSentence;
-
-            parent.insertBefore(mark, node);
-
-            if (afterText) {
-              parent.insertBefore(document.createTextNode(afterText), node);
-            }
-
-            parent.removeChild(node);
-          }
+    // 高亮当前句子
+    if ((isReading || readPosition > 0) && currentSentenceIndex >= 0) {
+      const targetIndex = isReading ? currentSentenceIndex : readPosition;
+      const targetSegment = containerRef.current.querySelector(
+        `.sentence-segment[data-sentence-index="${targetIndex}"]`
+      );
+      if (targetSegment) {
+        if (isReading) {
+          targetSegment.classList.add('bg-yellow-300', 'text-gray-900');
+        } else if (readPosition > 0) {
+          targetSegment.classList.add('bg-blue-100', 'text-gray-900');
         }
-      } else if (node.nodeType === Node.ELEMENT_NODE) {
-        // 递归处理子节点
-        Array.from(node.childNodes).forEach(processNode);
-      }
-    };
-
-    processNode(tempDiv);
-
-    return tempDiv.innerHTML;
-  }, [content, sentences, currentSentenceIndex, isReading, readPosition]);
-
-  // 自动滚动到当前高亮句子
-  useEffect(() => {
-    if (currentSentenceIndex >= 0 && containerRef.current) {
-      const highlightedEl = containerRef.current.querySelector('.sentence-highlight');
-      if (highlightedEl) {
-        highlightedEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // 自动滚动到高亮句子
+        targetSegment.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
     }
-  }, [currentSentenceIndex]);
+  }, [currentSentenceIndex, isReading, readPosition]);
 
   // 处理点击事件
   const handleClick = useCallback((e) => {
-    if (!onSentenceClick || sentences.length === 0) return;
+    if (!onSentenceClick) return;
 
-    // 查找点击位置最近的句子
-    let target = e.target;
-    let sentenceIndex = -1;
+    const target = e.target;
 
-    // 如果点击的是高亮元素，直接获取索引
-    if (target.classList.contains('sentence-highlight')) {
-      sentenceIndex = parseInt(target.getAttribute('data-index') || '-1');
-    } else {
-      // 否则查找最近的句子元素
-      const highlightEl = target.closest('.sentence-highlight');
-      if (highlightEl) {
-        sentenceIndex = parseInt(highlightEl.getAttribute('data-index') || '-1');
-      } else {
-        // 如果点击的是普通文本，尝试找到它所属的句子
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = processedContent;
+    // 如果点击的是句子元素
+    if (target.classList.contains('sentence-segment')) {
+      const index = parseInt(target.getAttribute('data-sentence-index') || '-1');
+      if (index >= 0) {
+        onSentenceClick(index);
+      }
+      return;
+    }
 
-        // 使用caretRangeFromPoint获取点击位置的文本
-        const range = document.caretRangeFromPoint
-          ? document.caretRangeFromPoint(e.clientX, e.clientY)
-          : null;
-
-        if (range) {
-          const textNode = range.startContainer;
-          if (textNode.nodeType === Node.TEXT_NODE) {
-            const fullText = textNode.textContent || '';
-            const offset = range.startOffset;
-            const clickedText = fullText.substring(Math.max(0, offset - 20), Math.min(fullText.length, offset + 20));
-
-            // 查找匹配的句子
-            for (let i = 0; i < sentences.length; i++) {
-              if (sentences[i].replace(/\s+/g, ' ').includes(clickedText.replace(/\s+/g, ' '))) {
-                sentenceIndex = i;
-                break;
-              }
-            }
-          }
-        }
+    // 如果点击的是句子元素内部的元素
+    const sentenceEl = target.closest('.sentence-segment');
+    if (sentenceEl) {
+      const index = parseInt(sentenceEl.getAttribute('data-sentence-index') || '-1');
+      if (index >= 0) {
+        onSentenceClick(index);
       }
     }
-
-    if (sentenceIndex >= 0 && sentenceIndex < sentences.length) {
-      onSentenceClick(sentenceIndex);
-    } else if (sentences.length > 0) {
-      onSentenceClick(0);
-    }
-  }, [sentences, processedContent, onSentenceClick]);
+  }, [onSentenceClick]);
 
   if (!content || content.trim() === '' || content === '<p></p>') {
     return (
@@ -677,7 +605,6 @@ function ReadableContent({
       ref={containerRef}
       className="readable-content cursor-pointer"
       onClick={handleClick}
-      dangerouslySetInnerHTML={{ __html: processedContent }}
       title="点击任意位置可从该句子开始朗读"
     />
   );
