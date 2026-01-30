@@ -455,11 +455,31 @@ function splitHtmlBySentences(html) {
 
   if (!text) return '';
 
-  // 使用与 splitIntoSentences 完全一致的分割逻辑
-  const sentenceEndPattern = /(?<=[。！？.!?;；:：])\s*/g;
-  let parts = text.split(sentenceEndPattern)
-    .map(s => s.trim())
-    .filter(s => s.length > 0);
+  // 使用兼容性好的人工工智能分割逻辑替代后行断言
+  const sentenceEndChars = '。！？.!?;；:：';
+  let parts = [];
+  let currentPart = '';
+  
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    currentPart += char;
+    
+    // 检查当前字符是否是句末符号
+    if (sentenceEndChars.includes(char)) {
+      // 添加当前部分到结果
+      const trimmed = currentPart.trim();
+      if (trimmed.length > 0) {
+        parts.push(trimmed);
+      }
+      currentPart = '';
+    }
+  }
+  
+  // 添加最后一个部分（如果还有剩余内容）
+  const finalTrimmed = currentPart.trim();
+  if (finalTrimmed.length > 0) {
+    parts.push(finalTrimmed);
+  }
 
   // 如果分割结果太少，尝试用换行符分割
   if (parts.length < 3) {

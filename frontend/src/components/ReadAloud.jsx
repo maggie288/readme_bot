@@ -31,11 +31,30 @@ export function splitIntoSentences(html) {
     return [];
   }
 
-  // 按中英文句号、问号、感叹号、分号分割，保留分隔符
-  let sentences = text
-    .split(/(?<=[。！？.!?;；:：])\s*/g)
-    .map(s => s.trim())
-    .filter(s => s.length > 0);
+  // 使用兼容性好的分割逻辑替代后行断言
+  const sentenceEndChars = '。！？.!?;；:：';
+  let sentences = [];
+  let currentSentence = '';
+  
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    currentSentence += char;
+    
+    // 检查当前字符是否是句末符号
+    if (sentenceEndChars.includes(char)) {
+      const trimmed = currentSentence.trim();
+      if (trimmed.length > 0) {
+        sentences.push(trimmed);
+      }
+      currentSentence = '';
+    }
+  }
+  
+  // 添加最后一个句子（如果还有剩余内容）
+  const finalTrimmed = currentSentence.trim();
+  if (finalTrimmed.length > 0) {
+    sentences.push(finalTrimmed);
+  }
 
   // 如果分割结果太少（少于3个句子），可能是纯英文或特殊格式
   // 尝试用换行符再次分割
