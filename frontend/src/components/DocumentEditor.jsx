@@ -506,6 +506,19 @@ function ReadableContent({
       ALLOW_DATA_ATTR: true,
     });
 
+    // 详细对比 content 和 html
+    console.log('[ReadableContent] DOMPurify 详细对比:', {
+      contentLength: content.length,
+      htmlLength: html.length,
+      contentCodeUnits: Array.from(content).slice(0, 30).map(c => c.charCodeAt(0)),
+      htmlCodeUnits: Array.from(html).slice(0, 30).map(c => c.charCodeAt(0)),
+      contentHasWenzi: content.includes('蚊子'),
+      htmlHasWenzi: html.includes('蚊子'),
+      contentPreview: content.substring(0, 50),
+      htmlPreview: html.substring(0, 50),
+      timestamp: new Date().toISOString()
+    });
+
     // 调试：如果 content 和 html 不同，记录差异
     if (html !== content) {
       console.log('[ReadableContent] DOMPurify 修改了 content!', {
