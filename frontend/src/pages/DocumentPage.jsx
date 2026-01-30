@@ -38,7 +38,7 @@ export default function DocumentPage() {
   const [jumpToSentence, setJumpToSentence] = useState(null);
 
   // 阅读进度状态
-  const [userProgress, setUserProgress] = useState(null);
+  const [readingProgress, setReadingProgress] = useState(null);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
@@ -190,13 +190,20 @@ export default function DocumentPage() {
   const loadDocument = async () => {
     try {
       const response = await documentsAPI.getById(id);
-      setDocument(response.data);
-      setEditedTitle(response.data.title);
-      setEditedContent(response.data.content);
-      setEditedPrice(response.data.price || 0);
-      setEditedIsPublic(response.data.isPublic !== false);
-      // 默认为预览模式，用户需要手动点击"编辑"按钮才能进入编辑模式
-      setIsEditing(false);
+      const doc = response.data;
+      setDocument(doc);
+      setEditedTitle(doc.title);
+      setEditedContent(doc.content);
+      setEditedPrice(doc.price || 0);
+      setEditedIsPublic(doc.isPublic !== false);
+
+      // 如果是新创建的文档（标题为默认"新文档"或内容为空），默认进入编辑模式
+      const isNewDocument = doc.title === '新文档' || !doc.content || doc.content === '<p></p>' || doc.content === '';
+      setIsEditing(isNewDocument);
+
+      // 更新最后保存内容的引用，避免自动保存立即触发
+      lastSavedContentRef.current = doc.content || '';
+      lastSavedTitleRef.current = doc.title || '';
     } catch (error) {
       console.error('Load document error:', error);
       alert('文档加载失败');

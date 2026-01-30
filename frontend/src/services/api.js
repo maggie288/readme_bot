@@ -44,6 +44,7 @@ export const authAPI = {
 export const documentsAPI = {
   getAll: () => api.get('/documents'),
   getMy: () => api.get('/documents/my'),
+  list: (params) => api.get('/documents/my', { params }),
   getById: (id) => api.get(`/documents/${id}`),
   create: (data) => api.post('/documents', data),
   update: (id, data) => api.put(`/documents/${id}`, data),
@@ -56,6 +57,7 @@ export const bookshelfAPI = {
   getAll: () => api.get('/bookshelf'),
   add: (documentId) => api.post('/bookshelf', { documentId }),
   remove: (documentId) => api.delete(`/bookshelf/${documentId}`),
+  check: (documentId) => api.get(`/bookshelf/check/${documentId}`),
   // 阅读进度 API
   getProgress: (documentId) => api.get(`/bookshelf/progress/${documentId}`),
   updateProgress: (documentId, data) => api.put(`/bookshelf/progress/${documentId}`, data),

@@ -100,6 +100,27 @@ router.delete('/:documentId', authenticateToken, async (req, res) => {
   }
 });
 
+// Check if document is in bookshelf
+router.get('/check/:documentId', authenticateToken, async (req, res) => {
+  try {
+    const { documentId } = req.params;
+
+    const bookshelfItem = await prisma.bookshelf.findUnique({
+      where: {
+        userId_documentId: {
+          userId: req.user.id,
+          documentId: parseInt(documentId),
+        },
+      },
+    });
+
+    res.json({ isInBookshelf: !!bookshelfItem });
+  } catch (error) {
+    console.error('Check bookshelf error:', error);
+    res.status(500).json({ error: 'Failed to check bookshelf' });
+  }
+});
+
 // Get reading progress for a document
 router.get('/progress/:documentId', authenticateToken, async (req, res) => {
   try {

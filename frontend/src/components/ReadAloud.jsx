@@ -337,26 +337,6 @@ export default function ReadAloud({
     };
   }, []);
 
-  // 语速实时变化处理 - 当语速改变且正在播放时，重新开始当前句子
-  useEffect(() => {
-    if (isPlaying && !isSpeedChangingRef.current) {
-      isSpeedChangingRef.current = true;
-
-      // 取消当前朗读
-      if (typeof window !== 'undefined') {
-        window.speechSynthesis.cancel();
-      }
-
-      // 短暂延迟后从当前句子重新开始
-      setTimeout(() => {
-        if (!isCancelledRef.current) {
-          speakSentence(currentSentenceIndex);
-        }
-        isSpeedChangingRef.current = false;
-      }, 100);
-    }
-  }, [speed, isPlaying, currentSentenceIndex, speakSentence]);
-
   // 朗读单个句子 - 添加重试机制
   const speakSentence = useCallback((index, retryCount = 0) => {
     console.log('[speakSentence] 被调用:', { index, retryCount, sentencesLength: sentences.length });
@@ -435,6 +415,26 @@ export default function ReadAloud({
       }
     }, 50);
   }, [sentences, onSentenceChange]);
+
+  // 语速实时变化处理 - 当语速改变且正在播放时，重新开始当前句子
+  useEffect(() => {
+    if (isPlaying && !isSpeedChangingRef.current) {
+      isSpeedChangingRef.current = true;
+
+      // 取消当前朗读
+      if (typeof window !== 'undefined') {
+        window.speechSynthesis.cancel();
+      }
+
+      // 短暂延迟后从当前句子重新开始
+      setTimeout(() => {
+        if (!isCancelledRef.current) {
+          speakSentence(currentSentenceIndex);
+        }
+        isSpeedChangingRef.current = false;
+      }, 100);
+    }
+  }, [speed, isPlaying, currentSentenceIndex, speakSentence]);
 
   const handlePlay = () => {
     if (!content || sentences.length === 0) {

@@ -15,6 +15,7 @@ import MobileLogin from './pages/MobileLogin';
 import MobileBookshelf from './pages/MobileBookshelf';
 import Bookshelf from './pages/Bookshelf';
 import ImportDocument from './components/ImportDocument';
+import MobileImportDocument from './components/MobileImportDocument';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -103,7 +104,7 @@ function useIsMobile() {
   return isMobile;
 }
 
-function App() {
+function AppContent() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const location = useLocation();
@@ -157,76 +158,92 @@ function App() {
   }
 
   return (
+    <div className="min-h-screen bg-gray-50">
+      {!location.pathname.startsWith('/m/') && (
+        <Header
+          documentTitle=""
+          user={user}
+          onLogout={handleLogout}
+          showDocTitle={false}
+        />
+      )}
+
+      <Routes>
+        <Route path="/m/login" element={
+          user ? <Navigate to="/m/home" replace /> : <MobileLogin onLogin={handleLogin} />
+        } />
+
+        <Route path="/m/home" element={
+          user ? <MobileHome user={user} onLogout={handleLogout} /> : <Navigate to="/m/login" replace />
+        } />
+
+        <Route path="/m/document/:id" element={
+          user ? <MobileDocumentPage /> : <Navigate to="/m/login" replace />
+        } />
+
+        <Route path="/m/bookshelf" element={
+          user ? <MobileBookshelf user={user} onLogout={handleLogout} /> : <Navigate to="/m/login" replace />
+        } />
+
+        <Route path="/m/import" element={
+          user ? <MobileImportDocument /> : <Navigate to="/m/login" replace />
+        } />
+
+        <Route path="/m/profile" element={
+          user ? <MobileHome user={user} onLogout={handleLogout} /> : <Navigate to="/m/login" replace />
+        } />
+
+        <Route path="/login" element={
+          user ? <Navigate to="/home" replace /> : <Login onLogin={handleLogin} />
+        } />
+
+        <Route path="/reset-password" element={<ResetPassword />} />
+
+        <Route path="/recharge-history" element={
+          user ? <Navigate to="/m/recharge-history" replace /> : <Navigate to="/login" replace />
+        } />
+
+        <Route path="/purchase-history" element={
+          user ? <Navigate to="/m/purchase-history" replace /> : <Navigate to="/login" replace />
+        } />
+
+        <Route path="/m/recharge-history" element={
+          user ? <RechargeHistory user={user} onLogout={handleLogout} /> : <Navigate to="/m/login" replace />
+        } />
+
+        <Route path="/m/purchase-history" element={
+          user ? <PurchaseHistory user={user} onLogout={handleLogout} /> : <Navigate to="/m/login" replace />
+        } />
+
+        <Route path="/payment/alipay" element={<AlipayPayment />} />
+
+        <Route path="/" element={
+          user ? <Navigate to="/home" replace /> : <PublicHome />
+        } />
+
+        <Route path="/home" element={
+          user ? <Home /> : <Navigate to="/login" replace />
+        } />
+
+        <Route path="/document/:id" element={
+          user ? <DocumentPage /> : <Navigate to="/login" replace />
+        } />
+
+        <Route path="/bookshelf" element={
+          user ? <Bookshelf /> : <Navigate to="/login" replace />
+        } />
+
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </div>
+  );
+}
+
+function App() {
+  return (
     <ErrorBoundary>
       <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <div className="min-h-screen bg-gray-50">
-          <Header
-            documentTitle=""
-            user={user}
-            onLogout={handleLogout}
-            showDocTitle={false}
-          />
-
-          <Routes>
-            <Route path="/m/login" element={
-              user ? <Navigate to="/m/home" replace /> : <MobileLogin onLogin={handleLogin} />
-            } />
-
-            <Route path="/m/home" element={
-              user ? <MobileHome user={user} onLogout={handleLogout} /> : <Navigate to="/m/login" replace />
-            } />
-
-            <Route path="/m/document/:id" element={
-              user ? <MobileDocumentPage /> : <Navigate to="/m/login" replace />
-            } />
-
-            <Route path="/m/bookshelf" element={
-              user ? <MobileBookshelf user={user} onLogout={handleLogout} /> : <Navigate to="/m/login" replace />
-            } />
-
-            <Route path="/m/import" element={
-              user ? <ImportDocument /> : <Navigate to="/m/login" replace />
-            } />
-
-            <Route path="/m/profile" element={
-              user ? <MobileHome user={user} onLogout={handleLogout} /> : <Navigate to="/m/login" replace />
-            } />
-
-            <Route path="/login" element={
-              user ? <Navigate to="/home" replace /> : <Login onLogin={handleLogin} />
-            } />
-
-            <Route path="/reset-password" element={<ResetPassword />} />
-
-            <Route path="/recharge-history" element={
-              user ? <RechargeHistory /> : <Navigate to="/login" replace />
-            } />
-
-            <Route path="/purchase-history" element={
-              user ? <PurchaseHistory /> : <Navigate to="/login" replace />
-            } />
-
-            <Route path="/payment/alipay" element={<AlipayPayment />} />
-
-            <Route path="/" element={
-              user ? <Navigate to="/home" replace /> : <PublicHome />
-            } />
-
-            <Route path="/home" element={
-              user ? <Home /> : <Navigate to="/login" replace />
-            } />
-
-            <Route path="/document/:id" element={
-              user ? <DocumentPage /> : <Navigate to="/login" replace />
-            } />
-
-            <Route path="/bookshelf" element={
-              user ? <Bookshelf /> : <Navigate to="/login" replace />
-            } />
-
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </div>
+        <AppContent />
       </Router>
     </ErrorBoundary>
   );

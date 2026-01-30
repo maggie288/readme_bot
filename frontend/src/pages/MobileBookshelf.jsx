@@ -1,12 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { documentsAPI } from '../services/api';
+import { documentsAPI, bookshelfAPI } from '../services/api';
+import MobileHeader from '../components/MobileHeader';
+import ImportDocument from '../components/ImportDocument';
 
 export default function MobileBookshelf({ user, onLogout }) {
   const navigate = useNavigate();
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('created');
+  const [activeTab, setActiveTab] = useState('my');
+  const [showActionMenu, setShowActionMenu] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [showAddMenu, setShowAddMenu] = useState(false);
 
   useEffect(() => {
     loadDocuments();
@@ -38,6 +44,63 @@ export default function MobileBookshelf({ user, onLogout }) {
     onLogout();
   };
 
+  const handleCreateNew = async () => {
+    try {
+      const response = await documentsAPI.create({
+        title: '新文档',
+        content: '',
+        mode: 'edit',
+      });
+      navigate(`/m/document/${response.data.id}`);
+    } catch (error) {
+      console.error('Create document error:', error);
+      alert('创建文档失败');
+    }
+  };
+
+  const handleImport = async ({ title, content, pdfPages, docId, price, isPublic }) => {
+    try {
+      const response = await documentsAPI.create({
+        title,
+        content,
+        mode: 'edit',
+        pdfPages: pdfPages || [],
+        docId: docId || null,
+        price: price || 0,
+        isPublic: isPublic !== undefined ? isPublic : true,
+      });
+      navigate(`/m/document/${response.data.id}`);
+    } catch (error) {
+      console.error('Import document error:', error);
+      alert('导入文档失败');
+    }
+  };
+
+  const handleDeleteDocument = async (docId) => {
+    try {
+      await documentsAPI.delete(docId);
+      setDocuments(documents.filter(doc => doc.id !== docId));
+      setShowDeleteConfirm(null);
+      setShowActionMenu(null);
+      alert('文档已删除');
+    } catch (error) {
+      console.error('Delete document error:', error);
+      alert('删除失败');
+    }
+  };
+
+  const handleRemoveFromFavorites = async (docId) => {
+    try {
+      await bookshelfAPI.remove(docId);
+      setDocuments(documents.filter(doc => doc.id !== docId));
+      setShowActionMenu(null);
+      alert('已从收藏移除');
+    } catch (error) {
+      console.error('Remove from favorites error:', error);
+      alert('移除失败');
+    }
+  };
+
   const formatDate = (dateStr) => {
     const date = new Date(dateStr);
     return date.toLocaleDateString();
@@ -45,51 +108,33 @@ export default function MobileBookshelf({ user, onLogout }) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* 顶部栏 */}
-      <header className="sticky top-0 bg-white shadow-sm z-10">
-        <div className="flex items-center justify-between px-4 py-3">
-          <button
-            onClick={() => navigate(-1)}
-            className="p-2 -ml-2 rounded-full hover:bg-gray-100"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          <h1 className="text-lg font-semibold">我的书架</h1>
-          <button
-            onClick={handleLogout}
-            className="p-2 -mr-2 rounded-full hover:bg-gray-100"
-          >
-            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-          </button>
-        </div>
+      {/* 移动端顶部导航栏 */}
+      <MobileHeader user={user} onLogout={onLogout} />
 
-        {/* 标签页 */}
-        <div className="flex border-b border-gray-100">
+      {/* 标签页 */}
+      <div className="sticky top-[57px] bg-white z-10 border-b border-gray-100 shadow-sm">
+        <div className="flex">
           <button
-            onClick={() => setActiveTab('created')}
+            onClick={() => setActiveTab('my')}
             className={`flex-1 py-3 text-sm font-medium ${
-              activeTab === 'created' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-gray-500'
+              activeTab === 'my' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-gray-500'
             }`}
           >
-            我创建的
+            我的文档
           </button>
           <button
-            onClick={() => setActiveTab('starred')}
+            onClick={() => setActiveTab('favorites')}
             className={`flex-1 py-3 text-sm font-medium ${
-              activeTab === 'starred' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-gray-500'
+              activeTab === 'favorites' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-gray-500'
             }`}
           >
-            我收藏的
+            我的收藏
           </button>
         </div>
-      </header>
+      </div>
 
       {/* 文档列表 */}
-      <main className="px-4 py-4">
+      <main className="px-4 py-4 pb-24">
         {loading ? (
           <div className="flex justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
@@ -102,37 +147,122 @@ export default function MobileBookshelf({ user, onLogout }) {
               </svg>
             </div>
             <p className="text-gray-500">暂无文档</p>
+            {activeTab === 'created' && (
+              <button
+                onClick={handleCreateNew}
+                className="mt-4 px-6 py-2 bg-blue-500 text-white rounded-lg text-sm"
+              >
+                创建新文档
+              </button>
+            )}
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-3">
             {documents.map((doc) => (
-              <Link
+              <div
                 key={doc.id}
-                to={`/m/document/${doc.id}`}
-                className="bg-white rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow"
+                className="bg-white rounded-lg p-4 shadow-sm"
               >
-                <div className="aspect-[3/4] bg-gray-100 rounded mb-2 overflow-hidden">
-                  {doc.coverImage ? (
-                    <img src={doc.coverImage} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <svg className="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
+                <div className="flex items-start justify-between">
+                  <Link
+                    to={`/m/document/${doc.id}`}
+                    className="flex-1 min-w-0"
+                  >
+                    <h3 className="font-medium text-gray-900 line-clamp-1">
+                      {doc.title || '无标题文档'}
+                    </h3>
+                    <div className="flex items-center gap-3 mt-1 text-sm text-gray-500">
+                      <span>{formatDate(doc.updatedAt)}</span>
+                      {doc.wordCount && (
+                        <span>{doc.wordCount} 字</span>
+                      )}
+                      {doc.isPublic !== undefined && (
+                        <span className={`px-2 py-0.5 rounded-full text-xs ${
+                          doc.isPublic ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-600'
+                        }`}>
+                          {doc.isPublic ? '公开' : '私密'}
+                        </span>
+                      )}
                     </div>
-                  )}
+                  </Link>
+                  <button
+                    onClick={() => setShowActionMenu(showActionMenu === doc.id ? null : doc.id)}
+                    className="p-2 -mr-2 text-gray-400 hover:text-gray-600"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                    </svg>
+                  </button>
                 </div>
-                <h3 className="font-medium text-gray-900 text-sm line-clamp-2">
-                  {doc.title || '无标题文档'}
-                </h3>
-                <p className="text-xs text-gray-500 mt-1">
-                  {doc.author?.username}
-                </p>
-              </Link>
+
+                {/* 操作菜单 */}
+                {showActionMenu === doc.id && (
+                  <div className="mt-3 pt-3 border-t border-gray-100 flex gap-2">
+                    {activeTab === 'my' ? (
+                      <>
+                        <button
+                          onClick={() => navigate(`/m/document/${doc.id}`)}
+                          className="flex-1 py-2 bg-blue-50 text-blue-600 rounded-lg text-sm font-medium"
+                        >
+                          编辑
+                        </button>
+                        <button
+                          onClick={() => setShowDeleteConfirm(doc.id)}
+                          className="flex-1 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-medium"
+                        >
+                          删除
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={() => handleRemoveFromFavorites(doc.id)}
+                        className="flex-1 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-medium"
+                      >
+                        取消收藏
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             ))}
           </div>
         )}
       </main>
+
+      {/* 删除确认弹窗 */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div 
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setShowDeleteConfirm(null)}
+          />
+          <div className="relative bg-white rounded-xl p-6 w-full max-w-sm">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">确认删除</h3>
+            <p className="text-gray-500 mb-6">确定要删除这个文档吗？此操作不可恢复。</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(null)}
+                className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-lg font-medium"
+              >
+                取消
+              </button>
+              <button
+                onClick={() => handleDeleteDocument(showDeleteConfirm)}
+                className="flex-1 py-3 bg-red-500 text-white rounded-lg font-medium"
+              >
+                删除
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 导入文档弹窗 */}
+      <ImportDocument
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onImport={handleImport}
+      />
 
       {/* 底部导航 */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 pb-safe">
@@ -155,15 +285,45 @@ export default function MobileBookshelf({ user, onLogout }) {
             </svg>
             <span className="text-xs mt-1">书架</span>
           </Link>
-          <Link
-            to="/m/import"
+          <button
+            onClick={() => setShowAddMenu(!showAddMenu)}
             className="flex flex-col items-center px-4 py-2 text-gray-500"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-            <span className="text-xs mt-1">导入</span>
-          </Link>
+            <span className="text-xs mt-1">新增</span>
+          </button>
+
+          {/* 新增菜单 */}
+          {showAddMenu && (
+            <div className="absolute bottom-16 left-1/2 -translate-x-1/2 bg-white rounded-xl shadow-lg border border-gray-200 p-2 z-50 min-w-[140px]">
+              <button
+                onClick={() => {
+                  setShowAddMenu(false);
+                  setShowImportModal(true);
+                }}
+                className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-lg"
+              >
+                <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+                导入文档
+              </button>
+              <button
+                onClick={() => {
+                  setShowAddMenu(false);
+                  handleCreateNew();
+                }}
+                className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-lg"
+              >
+                <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                新建文档
+              </button>
+            </div>
+          )}
           <Link
             to="/m/profile"
             className="flex flex-col items-center px-4 py-2 text-gray-500"
@@ -175,8 +335,6 @@ export default function MobileBookshelf({ user, onLogout }) {
           </Link>
         </div>
       </nav>
-
-      <div className="h-20"></div>
     </div>
   );
 }
