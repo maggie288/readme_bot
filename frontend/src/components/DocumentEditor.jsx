@@ -490,6 +490,13 @@ function ReadableContent({
       return '';
     }
 
+    console.log('[ReadableContent] 原始 content:', {
+      contentLength: content.length,
+      contentPreview: content.substring(0, 100),
+      contentFull: content,  // 完整内容
+      timestamp: new Date().toISOString()
+    });
+
     let html = DOMPurify.sanitize(content, {
       ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 's', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
         'ul', 'ol', 'li', 'blockquote', 'pre', 'code', 'a', 'img', 'table', 'thead', 'tbody',
