@@ -16,83 +16,64 @@ export function splitIntoSentences(html) {
     return [];
   }
 
-  // 预处理：统一换行符为空格，合并多个空格
-  text = text.replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim();
-
-  if (!text) {
-    return [];
-  }
-
-  // 按中英文句号、问号、感叹号、分号、逗号分割
-  // 使用更精确的分割逻辑：找到分割符，然后取分割符前面的部分
-  let sentences = [];
-  let currentSentence = '';
-  let i = 0;
-  
-  console.log('[splitIntoSentences] 开始分割文本:', {
+  console.log('[splitIntoSentences] 原始文本:', {
     textLength: text.length,
     textPreview: text.substring(0, 100),
     textFull: text,
     timestamp: new Date().toISOString()
   });
+
+  // 预处理：统一换行符为空格，合并多个空格
+  text = text.replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim();
+
+  // 按中英文句号、问号、感叹号、逗号分割
+  // 使用正则表达式：找到分割符（包括前面的文本）
+  const sentences = [];
+  let lastIndex = 0;
+  let i = 0;
   
   while (i < text.length) {
     const char = text[i];
-    const charCode = text.charCodeAt(i);
-    const isHighSurrogate = charCode >= 0xD800 && charCode <= 0xDBFF;
-    const isLowSurrogate = charCode >= 0xDC00 && charCode <= 0xDFFF;
-    
-    currentSentence += char;
-    
-    // 检测句末标点或段落分隔符
-    const isSentenceEnd = /[。！？.!?\n]/.test(char);
+    const isSentenceEnd = /[。！？.!?]/.test(char);
     const isComma = char === '，' || char === ',';
     
-    // 跳过代理对字符的处理
-    if (!isHighSurrogate && !isLowSurrogate) {
-      if (isSentenceEnd || isComma) {
-        const trimmedSentence = currentSentence.trim();
+    if (isSentenceEnd || isComma) {
+      // 找到分割符，提取前面的文本作为句子
+      const sentence = text.substring(lastIndex, i + 1).trim();
+      
+      // 清理句子末尾的分隔符
+      const cleanedSentence = sentence.replace(/[，,。！？.!?]+$/, '').trim();
+      
+      if (cleanedSentence.length > 2) {
+        sentences.push(cleanedSentence);
         console.log('[splitIntoSentences] 分割出句子:', {
-          sentence: trimmedSentence,
-          sentenceLength: trimmedSentence.length,
+          sentence: cleanedSentence,
+          sentenceLength: cleanedSentence.length,
           splitBy: isSentenceEnd ? 'sentenceEnd' : 'comma',
           timestamp: new Date().toISOString()
         });
-        if (trimmedSentence.length > 0) {
-          sentences.push(trimmedSentence);
-        }
-        currentSentence = '';
       }
+      
+      lastIndex = i + 1;
     }
     
     i++;
   }
   
-  // 添加最后一个句子
-  const lastSentence = currentSentence.trim();
-  console.log('[splitIntoSentences] 最后句子:', {
-    lastSentence,
-    lastSentenceLength: lastSentence.length,
-    timestamp: new Date().toISOString()
-  });
-  if (lastSentence.length > 0) {
+  // 添加最后一个句子（从最后一个分割符到文本末尾）
+  const lastSentence = text.substring(lastIndex).trim();
+  if (lastSentence.length > 2) {
     sentences.push(lastSentence);
-  }
-
-  // 过滤空句子和太短的句子
-  sentences = sentences.filter(s => {
-    const cleaned = s.replace(/[，。！？.!?;；:：,]+/g, '').trim();
-    return cleaned.length > 2;
-  });
-
-  // 如果过滤后没有句子，返回原始文本
-  if (sentences.length === 0) {
-    sentences = [text];
+    console.log('[splitIntoSentences] 最后句子:', {
+      lastSentence,
+      lastSentenceLength: lastSentence.length,
+      timestamp: new Date().toISOString()
+    });
   }
 
   console.log('[splitIntoSentences] 解析结果:', {
     sentenceCount: sentences.length,
-    allSentences: sentences.map(s => ({ text: s.substring(0, 40), length: s.length })),
+    allSentences: sentences.map(s => ({ text: s, length: s.length })),
     firstSentences: sentences.slice(0, 3).map(s => s.substring(0, 30)),
     lastSentence: sentences[sentences.length - 1]?.substring(0, 30),
     timestamp: new Date().toISOString()
