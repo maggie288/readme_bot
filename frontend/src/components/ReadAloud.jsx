@@ -8,9 +8,17 @@ export function splitIntoSentences(html) {
     return [];
   }
 
-  const div = document.createElement('div');
-  div.innerHTML = html;
-  let text = div.textContent || div.innerText || '';
+  let text = html;
+  
+  // 移除 HTML 标签，只保留文本
+  if (typeof document !== 'undefined') {
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    text = div.textContent || div.innerText || '';
+  } else {
+    // 服务端渲染时的备选方案：使用正则表达式移除 HTML 标签
+    text = html.replace(/<[^>]*>/g, '');
+  }
 
   if (!text.trim()) {
     return [];
@@ -304,7 +312,7 @@ export default function ReadAloud({
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (window.speechSynthesis) {
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
         window.speechSynthesis.cancel();
       }
     };
@@ -316,7 +324,9 @@ export default function ReadAloud({
       isSpeedChangingRef.current = true;
 
       // 取消当前朗读
-      window.speechSynthesis.cancel();
+      if (typeof window !== 'undefined') {
+        window.speechSynthesis.cancel();
+      }
 
       // 短暂延迟后从当前句子重新开始
       setTimeout(() => {
@@ -326,7 +336,7 @@ export default function ReadAloud({
         isSpeedChangingRef.current = false;
       }, 100);
     }
-  }, [speed]);
+  }, [speed, isPlaying, currentSentenceIndex, speakSentence]);
 
   // 朗读单个句子 - 添加重试机制
   const speakSentence = useCallback((index, retryCount = 0) => {
@@ -395,11 +405,13 @@ export default function ReadAloud({
     utteranceRef.current = utterance;
     
     // 确保在 speak 之前取消任何正在进行的语音
-    window.speechSynthesis.cancel();
+    if (typeof window !== 'undefined') {
+      window.speechSynthesis.cancel();
+    }
     
     // 添加短暂延迟，确保 cancel 完成
     setTimeout(() => {
-      if (!isCancelledRef.current) {
+      if (!isCancelledRef.current && typeof window !== 'undefined') {
         window.speechSynthesis.speak(utterance);
       }
     }, 50);
@@ -412,12 +424,16 @@ export default function ReadAloud({
     }
 
     if (isPaused && !useCustomVoice) {
-      window.speechSynthesis.resume();
+      if (typeof window !== 'undefined') {
+        window.speechSynthesis.resume();
+      }
       setIsPaused(false);
       setIsPlaying(true);
     } else {
       isCancelledRef.current = false;
-      window.speechSynthesis.cancel();
+      if (typeof window !== 'undefined') {
+        window.speechSynthesis.cancel();
+      }
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current = null;
@@ -436,7 +452,7 @@ export default function ReadAloud({
   };
 
   const handlePause = () => {
-    if (window.speechSynthesis && isPlaying) {
+    if (typeof window !== 'undefined' && window.speechSynthesis && isPlaying) {
       window.speechSynthesis.pause();
       setIsPaused(true);
       setIsPlaying(false);
@@ -447,7 +463,7 @@ export default function ReadAloud({
     isCancelledRef.current = true;
 
     // 停止浏览器 TTS
-    if (window.speechSynthesis) {
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
       window.speechSynthesis.cancel();
     }
 
@@ -474,7 +490,9 @@ export default function ReadAloud({
       targetSentenceRef.current = index;
 
       isCancelledRef.current = true;
-      window.speechSynthesis.cancel();
+      if (typeof window !== 'undefined') {
+        window.speechSynthesis.cancel();
+      }
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current = null;
