@@ -27,6 +27,7 @@ export default function Sidebar({
       {/* Button Column */}
       <div className="fixed right-0 top-20 bg-gray-50 border-l border-gray-200 p-2 flex flex-col gap-2 z-30">
         <button
+          type="button"
           onClick={() => togglePanel('toc')}
           className={`p-3 rounded-lg transition-colors ${
             activePanel === 'toc'
@@ -51,6 +52,7 @@ export default function Sidebar({
         </button>
 
         <button
+          type="button"
           onClick={() => togglePanel('read')}
           className={`p-3 rounded-lg transition-colors ${
             activePanel === 'read'
@@ -75,6 +77,7 @@ export default function Sidebar({
         </button>
 
         <button
+          type="button"
           onClick={() => togglePanel('ai')}
           className={`p-3 rounded-lg transition-colors ${
             activePanel === 'ai'
@@ -99,6 +102,7 @@ export default function Sidebar({
         </button>
 
         <button
+          type="button"
           onClick={() => togglePanel('notes')}
           className={`p-3 rounded-lg transition-colors ${
             activePanel === 'notes'
@@ -135,6 +139,7 @@ export default function Sidebar({
                 {activePanel === 'notes' && '我的备注'}
               </h3>
               <button
+                type="button"
                 onClick={() => setActivePanel(null)}
                 className="text-gray-400 hover:text-gray-600"
               >

@@ -188,17 +188,22 @@ export default function ReadAloud({
     }
   }, [content]);
 
+  // 使用 ref 存储最新的 handleJumpToSentence，避免 useEffect 循环依赖
+  const handleJumpToSentenceRef = useRef(null);
+
   // 当外部 startFromSentence 改变时更新（点击句子触发）
   useEffect(() => {
     if (startFromSentence !== currentSentenceIndex) {
-      // 如果正在播放，跳转到新位置
       if (isPlaying || isPaused) {
-        handleJumpToSentence(startFromSentence);
+        // 使用 ref 来避免依赖 handleJumpToSentence
+        if (handleJumpToSentenceRef.current) {
+          handleJumpToSentenceRef.current(startFromSentence);
+        }
       } else {
         setCurrentSentenceIndex(startFromSentence);
       }
     }
-  }, [startFromSentence]);
+  }, [startFromSentence, currentSentenceIndex, isPlaying, isPaused]);
 
   // 通知父组件播放状态变化
   useEffect(() => {
@@ -374,6 +379,11 @@ export default function ReadAloud({
       }, 100);
     }
   }, [sentences.length, speakSentence, speakWithCustomVoice, useCustomVoice, customVoiceInfo]);
+
+  // 更新 ref 以供 useEffect 使用
+  useEffect(() => {
+    handleJumpToSentenceRef.current = handleJumpToSentence;
+  }, [handleJumpToSentence]);
 
   // 上一句
   const handlePrevSentence = () => {

@@ -332,3 +332,225 @@
 .tiptap .ProseMirror-placeholder {
   color: #9ca3af;
 }
+
+/* ReadableContent 阅读模式样式 */
+.readable-content {
+  color: #374151;
+  line-height: 1.75;
+  /* 防止长文本横向溢出 */
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
+  hyphens: auto;
+}
+
+.readable-content p {
+  margin: 1em 0;
+  line-height: 1.75;
+}
+
+.readable-content h1,
+.readable-content h2,
+.readable-content h3,
+.readable-content h4,
+.readable-content h5,
+.readable-content h6 {
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  font-weight: bold;
+  line-height: 1.3;
+}
+
+.readable-content h1 {
+  font-size: 2.25em;
+}
+
+.readable-content h2 {
+  font-size: 1.875em;
+}
+
+.readable-content h3 {
+  font-size: 1.5em;
+}
+
+.readable-content h4 {
+  font-size: 1.25em;
+}
+
+.readable-content h5 {
+  font-size: 1.125em;
+}
+
+.readable-content h6 {
+  font-size: 1em;
+  font-weight: 600;
+}
+
+/* 列表 */
+.readable-content ul,
+.readable-content ol {
+  padding-left: 2em;
+  margin: 1em 0;
+}
+
+.readable-content ul {
+  list-style-type: disc;
+}
+
+.readable-content ol {
+  list-style-type: decimal;
+}
+
+.readable-content li {
+  margin: 0.25em 0;
+}
+
+/* 行内代码 - 防止溢出 */
+.readable-content code {
+  background-color: #f3f4f6;
+  color: #e83e8c;
+  padding: 0.2em 0.4em;
+  border-radius: 0.25rem;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 0.9em;
+  word-break: break-all;
+}
+
+/* 代码块 - 添加横向滚动 */
+.readable-content pre {
+  background-color: #1f2937;
+  color: #f9fafb;
+  padding: 1em;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  margin: 1em 0;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 0.875em;
+  line-height: 1.5;
+  max-width: 100%;
+}
+
+.readable-content pre code {
+  background: none;
+  color: inherit;
+  padding: 0;
+  font-size: inherit;
+  word-break: normal;
+}
+
+/* 引用 */
+.readable-content blockquote {
+  border-left: 4px solid #3b82f6;
+  padding-left: 1em;
+  margin: 1em 0;
+  color: #6b7280;
+  font-style: italic;
+  background-color: #f9fafb;
+  padding: 0.5em 1em;
+  border-radius: 0.25rem;
+}
+
+/* 分隔线 */
+.readable-content hr {
+  border: none;
+  border-top: 2px solid #e5e7eb;
+  margin: 2em 0;
+}
+
+/* 链接 - 防止长URL溢出 */
+.readable-content a {
+  color: #3b82f6;
+  text-decoration: underline;
+  word-break: break-all;
+}
+
+.readable-content a:hover {
+  color: #2563eb;
+}
+
+/* 图片 - 限制最大宽度 */
+.readable-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  margin: 1em 0;
+  display: block;
+}
+
+/* figure 和 figcaption */
+.readable-content figure {
+  margin: 1.5em 0;
+  max-width: 100%;
+}
+
+.readable-content figcaption {
+  color: #6b7280;
+  font-size: 0.875em;
+  margin-top: 0.5em;
+  text-align: center;
+}
+
+/* 表格 - 防止溢出 */
+.readable-content table {
+  border-collapse: collapse;
+  table-layout: auto;
+  width: 100%;
+  margin: 1em 0;
+  overflow-x: auto;
+  display: block;
+  max-width: 100%;
+}
+
+.readable-content table td,
+.readable-content table th {
+  min-width: 1em;
+  border: 1px solid #d1d5db;
+  padding: 0.5em 0.75em;
+  vertical-align: top;
+  box-sizing: border-box;
+  word-break: break-word;
+}
+
+.readable-content table th {
+  font-weight: bold;
+  text-align: left;
+  background-color: #f3f4f6;
+}
+
+/* 文本格式 */
+.readable-content strong {
+  font-weight: bold;
+}
+
+.readable-content em {
+  font-style: italic;
+}
+
+.readable-content u {
+  text-decoration: underline;
+}
+
+.readable-content s {
+  text-decoration: line-through;
+}
+
+.readable-content mark {
+  background-color: #fef08a;
+  padding: 0.1em 0.2em;
+  border-radius: 0.15rem;
+}
+
+/* 响应式 */
+@media (max-width: 640px) {
+  .readable-content h1 {
+    font-size: 1.75em;
+  }
+
+  .readable-content h2 {
+    font-size: 1.5em;
+  }
+
+  .readable-content table {
+    font-size: 0.875em;
+  }
+}

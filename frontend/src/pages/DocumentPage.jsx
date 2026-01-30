@@ -183,7 +183,8 @@ export default function DocumentPage() {
       setEditedContent(response.data.content);
       setEditedPrice(response.data.price || 0);
       setEditedIsPublic(response.data.isPublic !== false);
-      setIsEditing(response.data.mode === 'edit');
+      // 默认为预览模式，用户需要手动点击"编辑"按钮才能进入编辑模式
+      setIsEditing(false);
     } catch (error) {
       console.error('Load document error:', error);
       alert('文档加载失败');
@@ -838,7 +839,7 @@ export default function DocumentPage() {
               <DocumentEditor
                 content={contentTab === 'translation' && translatedContent ? translatedContent : editedContent}
                 onChange={contentTab === 'original' ? setEditedContent : undefined}
-                editable={isEditing && contentTab === 'original'}
+                editable={isOwner && isEditing && contentTab === 'original'}
                 isReading={isReading}
                 currentSentenceIndex={currentSentenceIndex}
                 onSentenceClick={handleSentenceClick}
