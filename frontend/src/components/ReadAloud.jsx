@@ -208,10 +208,9 @@ export default function ReadAloud({
         timestamp: new Date().toISOString()
       });
       const parsed = splitIntoSentences(content);
-      console.log('[ReadAloud] 解析结果:', {
-        sentenceCount: parsed.length,
-        firstSentences: parsed.slice(0, 3),
-        timestamp: new Date().toISOString()
+      console.log('[ReadAloud] 句子列表:', {
+        total: parsed.length,
+        allSentences: parsed.map((s, i) => `[${i}]: ${s.substring(0, 30)}`)
       });
       setSentences(parsed);
     }
@@ -299,7 +298,8 @@ export default function ReadAloud({
     utterance.volume = 1.0;
 
     utterance.onstart = () => {
-      console.log('[ReadAloud] 开始朗读句子:', index, retryCount > 0 ? `(重试 ${retryCount} 次)` : '');
+      const sentenceContent = sentences[index] || '';
+      console.log('[朗读] 索引:', index, '| 内容:', sentenceContent.substring(0, 50));
       setCurrentSentenceIndex(index);
       if (onSentenceChange) {
         onSentenceChange(index);
@@ -307,7 +307,8 @@ export default function ReadAloud({
     };
 
     utterance.onend = () => {
-      console.log('[ReadAloud] 句子朗读完成:', index);
+      const sentenceContent = sentences[index] || '';
+      console.log('[完成] 索引:', index, '| 内容:', sentenceContent.substring(0, 50));
       if (!isCancelledRef.current && !isSpeedChangingRef.current) {
         speakSentence(index + 1);
       }

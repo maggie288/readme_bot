@@ -544,7 +544,10 @@ function ReadableContent({
 
     // 为所有句子元素添加索引
     const sentenceSegments = containerRef.current.querySelectorAll('.sentence-segment');
-    console.log('[ReadableContent] DOM 句子数量:', sentenceSegments.length);
+    console.log('[DocumentEditor] DOM 句子列表:', {
+      total: sentenceSegments.length,
+      allSegments: Array.from(sentenceSegments).map((seg, i) => `[${i}]: ${seg.textContent.substring(0, 30)}`)
+    });
     sentenceSegments.forEach((segment, index) => {
       segment.setAttribute('data-sentence-index', index);
     });
@@ -566,17 +569,12 @@ function ReadableContent({
     // 高亮当前句子
     if ((isReading || readPosition > 0) && currentSentenceIndex >= 0) {
       const targetIndex = isReading ? currentSentenceIndex : readPosition;
-      console.log('[ReadableContent] 高亮索引:', {
-        isReading,
-        readPosition,
-        currentSentenceIndex,
-        targetIndex,
-        timestamp: new Date().toISOString()
-      });
       const targetSegment = containerRef.current.querySelector(
         `.sentence-segment[data-sentence-index="${targetIndex}"]`
       );
       if (targetSegment) {
+        const highlightedText = targetSegment.textContent;
+        console.log('[高亮] 索引:', targetIndex, '| 内容:', highlightedText.substring(0, 50));
         if (isReading) {
           targetSegment.classList.add('bg-yellow-300', 'text-gray-900');
         } else if (readPosition > 0) {
