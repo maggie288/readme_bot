@@ -16,6 +16,8 @@ import MobileBookshelf from './pages/MobileBookshelf';
 import Bookshelf from './pages/Bookshelf';
 import ImportDocument from './components/ImportDocument';
 import MobileImportDocument from './components/MobileImportDocument';
+import MobileRechargeHistory from './pages/MobileRechargeHistory';
+import MobilePurchaseHistory from './pages/MobilePurchaseHistory';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -200,19 +202,19 @@ function AppContent() {
         <Route path="/reset-password" element={<ResetPassword />} />
 
         <Route path="/recharge-history" element={
-          user ? <Navigate to="/m/recharge-history" replace /> : <Navigate to="/login" replace />
+          user ? <RechargeHistory user={user} onLogout={handleLogout} /> : <Navigate to="/login" replace />
         } />
 
         <Route path="/purchase-history" element={
-          user ? <Navigate to="/m/purchase-history" replace /> : <Navigate to="/login" replace />
+          user ? <PurchaseHistory user={user} onLogout={handleLogout} /> : <Navigate to="/login" replace />
         } />
 
         <Route path="/m/recharge-history" element={
-          user ? <RechargeHistory user={user} onLogout={handleLogout} /> : <Navigate to="/m/login" replace />
+          user ? <MobileRechargeHistory user={user} onLogout={handleLogout} /> : <Navigate to="/m/login" replace />
         } />
 
         <Route path="/m/purchase-history" element={
-          user ? <PurchaseHistory user={user} onLogout={handleLogout} /> : <Navigate to="/m/login" replace />
+          user ? <MobilePurchaseHistory user={user} onLogout={handleLogout} /> : <Navigate to="/m/login" replace />
         } />
 
         <Route path="/payment/alipay" element={<AlipayPayment />} />
