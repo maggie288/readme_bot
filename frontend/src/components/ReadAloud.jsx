@@ -59,7 +59,9 @@ export default function ReadAloud({
 }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
-  const [currentSentenceIndex, setCurrentSentenceIndex] = useState(0);
+  const [currentSentenceIndex, setCurrentSentenceIndex] = useState(
+    initialProgress?.listenPosition || startFromSentence
+  );
   const [sentences, setSentences] = useState([]);
   const [speed, setSpeed] = useState(initialProgress?.speed || 1.0);
   const utteranceRef = useRef(null);
@@ -178,20 +180,13 @@ export default function ReadAloud({
     }
   }, [sentences, customVoiceInfo, onSentenceChange]);
 
-  // 解析内容为句子并同步初始位置
+  // 解析内容为句子
   useEffect(() => {
     if (content) {
       const parsed = splitIntoSentences(content);
       setSentences(parsed);
-      // 同步初始位置
-      const initialIndex = initialProgress?.listenPosition || startFromSentence;
-      if (initialIndex > 0 && initialIndex < (initialProgress?.totalSentences || Infinity)) {
-        setCurrentSentenceIndex(initialIndex);
-      } else {
-        setCurrentSentenceIndex(startFromSentence);
-      }
     }
-  }, [content, initialProgress, startFromSentence]);
+  }, [content]);
 
   // 使用 ref 存储最新的 handleJumpToSentence，避免 useEffect 循环依赖
   const handleJumpToSentenceRef = useRef(null);
@@ -217,30 +212,16 @@ export default function ReadAloud({
     }
   }, [isPlaying, isPaused, currentSentenceIndex, onPlayStateChange]);
 
-  // 通知进度变化（用于保存到后端和同步到父组件）
+  // 通知进度变化（用于保存到后端）
   useEffect(() => {
-    const progressData = {
-      listenPosition: currentSentenceIndex,
-      listenPercent: sentences.length > 0
-        ? Math.round((currentSentenceIndex / sentences.length) * 100)
-        : 0,
-      speed: speed
-    };
-
-    // 保存到后端
     if (onProgressChange && sentences.length > 0) {
-      onProgressChange(progressData);
-    }
-
-    // 同步状态到父组件（用于高亮和进度条）
-    if (onPlayStateChange) {
-      onPlayStateChange({
-        isPlaying,
-        isPaused,
-        currentSentenceIndex
+      onProgressChange({
+        listenPosition: currentSentenceIndex,
+        listenPercent: Math.round((currentSentenceIndex / sentences.length) * 100),
+        speed: speed
       });
     }
-  }, [currentSentenceIndex, speed, sentences.length, isPlaying, isPaused, onProgressChange, onPlayStateChange]);
+  }, [currentSentenceIndex, speed, sentences.length, onProgressChange]);
 
   // Cleanup on unmount
   useEffect(() => {
