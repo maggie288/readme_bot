@@ -147,13 +147,21 @@ export default function MobileBookshelf({ user, onLogout }) {
               </svg>
             </div>
             <p className="text-gray-500">暂无文档</p>
-            {activeTab === 'created' && (
-              <button
-                onClick={handleCreateNew}
-                className="mt-4 px-6 py-2 bg-blue-500 text-white rounded-lg text-sm"
-              >
-                创建新文档
-              </button>
+            {activeTab === 'my' && (
+              <div className="flex justify-center gap-3 mt-4">
+                <button
+                  onClick={() => setShowImportModal(true)}
+                  className="px-6 py-2 bg-blue-500 text-white rounded-lg text-sm"
+                >
+                  导入文档
+                </button>
+                <button
+                  onClick={handleCreateNew}
+                  className="px-6 py-2 bg-green-500 text-white rounded-lg text-sm"
+                >
+                  新建文档
+                </button>
+              </div>
             )}
           </div>
         ) : (

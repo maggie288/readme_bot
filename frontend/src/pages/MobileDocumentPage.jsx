@@ -160,9 +160,29 @@ export default function MobileDocumentPage() {
     setHasUnsavedChanges(true);
   };
 
+  // 检查内容是否有实际内容需要保存
+  const hasMeaningfulContent = () => {
+    const title = editedTitle?.trim() || '';
+    const content = editedContent?.trim() || '';
+    // 检查HTML内容是否有实际文本
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = content;
+    const plainText = tempDiv.textContent || tempDiv.innerText || '';
+    const hasText = plainText.trim().length > 0;
+    // 标题不是默认标题
+    const isDefaultTitle = title === '新文档' || title === '';
+    return hasText && !isDefaultTitle;
+  };
+
   // 自动保存功能
   const autoSave = useCallback(async () => {
     if (!hasUnsavedChanges || !isEditing) return;
+    
+    // 检查是否有实际内容需要保存，避免保存空文档
+    if (!hasMeaningfulContent()) {
+      console.log('[MobileDocumentPage] 自动保存跳过：没有实际内容');
+      return;
+    }
     
     try {
       setIsAutoSaving(true);
