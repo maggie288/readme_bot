@@ -442,20 +442,53 @@ export function EditorToolbar({ editor }) {
 }
 
 // 可朗读内容组件 - 渲染完整HTML内容，支持句子高亮和点击
-function ReadableContent({ content, currentSentenceIndex, onSentenceClick, isReading, readPosition = 0 }) {
-  const sentences = useMemo(() => splitIntoSentences(content || ''), [content]);
+function ReadableContent({
+  content,
+  currentSentenceIndex,
+  onSentenceClick,
+  isReading,
+  readPosition = 0
+}) {
+  console.log('[ReadableContent] 渲染 props:', {
+    hasContent: !!content,
+    contentLength: content?.length,
+    currentSentenceIndex,
+    isReading,
+    readPosition,
+    timestamp: new Date().toISOString()
+  });
+
+  const sentences = useMemo(() => {
+    const result = splitIntoSentences(content || '');
+    console.log('[ReadableContent] splitIntoSentences 结果:', {
+      sentenceCount: result.length,
+      firstSentences: result.slice(0, 3),
+      timestamp: new Date().toISOString()
+    });
+    return result;
+  }, [content]);
+
   const containerRef = useRef(null);
 
   // 当前高亮的句子
   const currentSentence = sentences[currentSentenceIndex];
   const readPositionSentence = sentences[readPosition];
 
+  console.log('[ReadableContent] 当前高亮句子:', {
+    currentSentenceIndex,
+    currentSentence: currentSentence ? currentSentence.substring(0, 20) + '...' : null,
+    readPosition,
+    readPositionSentence: readPositionSentence ? readPositionSentence.substring(0, 20) + '...' : null,
+    timestamp: new Date().toISOString()
+  });
+
   // 处理 HTML 内容，高亮当前句子 - 必须在早期返回之前调用
   const processedContent = useMemo(() => {
     if (!content || content.trim() === '' || content === '<p></p>') {
+      console.log('[ReadableContent] 内容为空，返回空字符串');
       return '';
     }
-    // 首先使用 DOMPurify 清理 HTML 防止 XSS 攻击
+
     let html = DOMPurify.sanitize(content, {
       ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 's', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
         'ul', 'ol', 'li', 'blockquote', 'pre', 'code', 'a', 'img', 'table', 'thead', 'tbody',
@@ -465,16 +498,43 @@ function ReadableContent({ content, currentSentenceIndex, onSentenceClick, isRea
       ALLOW_DATA_ATTR: true,
     });
 
+    console.log('[ReadableContent] DOMPurify 后:', {
+      htmlLength: html.length,
+      hasMarkBefore: html.includes('<mark'),
+      timestamp: new Date().toISOString()
+    });
+
     // 高亮当前朗读的句子
     if (isReading && currentSentence) {
       const escapedSentence = currentSentence.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const regex = new RegExp(`(${escapedSentence})`, 'g');
+      const beforeCount = (html.match(/<mark/g) || []).length;
       html = html.replace(regex, '<mark class="sentence-highlight bg-yellow-300 text-gray-900 rounded px-0.5">$1</mark>');
+      const afterCount = (html.match(/<mark/g) || []).length;
+      console.log('[ReadableContent] 高亮处理 (isReading):', {
+        currentSentence: currentSentence.substring(0, 30),
+        escapedSentence: escapedSentence.substring(0, 30),
+        markBefore: beforeCount,
+        markAfter: afterCount,
+        timestamp: new Date().toISOString()
+      });
     } else if (!isReading && readPositionSentence && readPosition > 0) {
       // 高亮上次阅读位置
       const escapedSentence = readPositionSentence.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const regex = new RegExp(`(${escapedSentence})`, 'g');
       html = html.replace(regex, '<mark class="sentence-highlight bg-blue-100 text-gray-900 rounded px-0.5">$1</mark>');
+      console.log('[ReadableContent] 高亮处理 (readPosition):', {
+        readPositionSentence: readPositionSentence.substring(0, 30),
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      console.log('[ReadableContent] 未执行高亮:', {
+        isReading,
+        hasCurrentSentence: !!currentSentence,
+        hasReadPositionSentence: !!readPositionSentence,
+        readPosition,
+        timestamp: new Date().toISOString()
+      });
     }
 
     return html;
@@ -484,6 +544,11 @@ function ReadableContent({ content, currentSentenceIndex, onSentenceClick, isRea
   useEffect(() => {
     if (currentSentenceIndex >= 0 && containerRef.current) {
       const highlightedEl = containerRef.current.querySelector('.sentence-highlight');
+      console.log('[ReadableContent] 自动滚动:', {
+        currentSentenceIndex,
+        hasHighlightedEl: !!highlightedEl,
+        timestamp: new Date().toISOString()
+      });
       if (highlightedEl) {
         highlightedEl.scrollIntoView({
           behavior: 'smooth',
@@ -708,12 +773,39 @@ export default function DocumentEditor({
     }
   }, [editor, onEditorReady]);
 
+  // 追踪朗读相关 props 的变化
+  useEffect(() => {
+    console.log('[DocumentEditor] 朗读 props 变化:', {
+      isReading,
+      currentSentenceIndex,
+      readPosition,
+      timestamp: new Date().toISOString()
+    });
+  }, [isReading, currentSentenceIndex, readPosition]);
+
+  // 追踪 content 变化
+  useEffect(() => {
+    console.log('[DocumentEditor] content 变化:', {
+      contentLength: content?.length,
+      contentPreview: content?.substring(0, 50),
+      timestamp: new Date().toISOString()
+    });
+  }, [content]);
+
   if (!editor) {
     return <div className="p-8 text-gray-400">加载编辑器...</div>;
   }
 
   // 如果不是编辑模式，显示可朗读视图（支持点击句子跳转）
   const showReadableView = !editable;
+
+  console.log('[DocumentEditor] 渲染判断:', {
+    editable,
+    showReadableView,
+    isReading,
+    currentSentenceIndex,
+    timestamp: new Date().toISOString()
+  });
 
   return (
     <div className="prose prose-sm sm:prose lg:prose-lg max-w-none">

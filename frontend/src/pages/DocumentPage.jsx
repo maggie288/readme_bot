@@ -316,18 +316,37 @@ export default function DocumentPage() {
 
   // 处理朗读句子变化
   const handleSentenceChange = useCallback((index) => {
-    setCurrentSentenceIndex(index);
+    console.log('[DocumentPage] handleSentenceChange 被调用, index:', index);
+    // 使用函数式更新确保使用最新状态
+    setCurrentSentenceIndex((prevIndex) => {
+      console.log('[DocumentPage] 更新 currentSentenceIndex:', prevIndex, '->', index);
+      return index;
+    });
     if (index === -1) {
       // 朗读结束
       setIsReading(false);
+      console.log('[DocumentPage] 朗读结束', { timestamp: new Date().toISOString() });
     }
   }, []);
 
   // 处理播放状态变化
   const handlePlayStateChange = useCallback(({ isPlaying, isPaused, currentSentenceIndex: idx }) => {
-    setIsReading(isPlaying || isPaused);
+    console.log('[DocumentPage] handlePlayStateChange 被调用:', { isPlaying, isPaused, idx });
+    // 使用函数式更新确保状态同步
+    setIsReading((prev) => {
+      const newValue = isPlaying || isPaused;
+      if (prev !== newValue) {
+        console.log('[DocumentPage] 更新 isReading:', prev, '->', newValue);
+      }
+      return newValue;
+    });
     if (idx >= 0) {
-      setCurrentSentenceIndex(idx);
+      setCurrentSentenceIndex((prev) => {
+        if (prev !== idx) {
+          console.log('[DocumentPage] 从 playState 更新 currentSentenceIndex:', prev, '->', idx);
+        }
+        return idx;
+      });
     }
   }, []);
 
@@ -836,16 +855,30 @@ export default function DocumentPage() {
           <div className="bg-white">
             {/* 文字视图：使用 DocumentEditor 显示富文本内容，保留图片、样式、表格 */}
             {!(isTwitterSource && contentTab === 'translation' && !translationPurchased) && (
-              <DocumentEditor
-                content={contentTab === 'translation' && translatedContent ? translatedContent : editedContent}
-                onChange={contentTab === 'original' ? setEditedContent : undefined}
-                editable={isOwner && isEditing && contentTab === 'original'}
-                isReading={isReading}
-                currentSentenceIndex={currentSentenceIndex}
-                onSentenceClick={handleSentenceClick}
-                readPosition={readingProgress?.listenPosition || 0}
-                onEditorReady={setEditor}
-              />
+              <>
+                {(() => {
+                  const contentToRender = contentTab === 'translation' && translatedContent ? translatedContent : editedContent;
+                  console.log('[DocumentPage] DocumentEditor props:', {
+                    contentLength: contentToRender?.length || 0,
+                    editable: isOwner && isEditing && contentTab === 'original',
+                    isReading,
+                    currentSentenceIndex,
+                    readPosition: readingProgress?.listenPosition || 0,
+                    timestamp: new Date().toISOString()
+                  });
+                  return null;
+                })()}
+                <DocumentEditor
+                  content={contentTab === 'translation' && translatedContent ? translatedContent : editedContent}
+                  onChange={contentTab === 'original' ? setEditedContent : undefined}
+                  editable={isOwner && isEditing && contentTab === 'original'}
+                  isReading={isReading}
+                  currentSentenceIndex={currentSentenceIndex}
+                  onSentenceClick={handleSentenceClick}
+                  readPosition={readingProgress?.listenPosition || 0}
+                  onEditorReady={setEditor}
+                />
+              </>
             )}
           </div>
         ) : (
