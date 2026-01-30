@@ -80,7 +80,8 @@ export function splitIntoSentences(html) {
       index: idx,
       text: s,
       length: s.length,
-      isTruncated: s.length !== text.length
+      isTruncated: s.length !== text.length,
+      textFull: s  // 完整句子
     })),
     firstSentences: sentences.slice(0, 3).map(s => s.substring(0, 30)),
     lastSentence: sentences[sentences.length - 1]?.substring(0, 30),
