@@ -183,7 +183,17 @@ export default function ReadAloud({
   // 解析内容为句子
   useEffect(() => {
     if (content) {
+      console.log('[ReadAloud] 解析内容:', {
+        contentLength: content.length,
+        contentPreview: content.substring(0, 100),
+        timestamp: new Date().toISOString()
+      });
       const parsed = splitIntoSentences(content);
+      console.log('[ReadAloud] 解析结果:', {
+        sentenceCount: parsed.length,
+        firstSentences: parsed.slice(0, 3),
+        timestamp: new Date().toISOString()
+      });
       setSentences(parsed);
     }
   }, [content]);
@@ -250,8 +260,8 @@ export default function ReadAloud({
     }
   }, [speed]);
 
-  // 朗读单个句子
-  const speakSentence = useCallback((index) => {
+  // 朗读单个句子 - 添加重试机制
+  const speakSentence = useCallback((index, retryCount = 0) => {
     if (index >= sentences.length || isCancelledRef.current) {
       // 所有句子朗读完毕
       setIsPlaying(false);
@@ -270,6 +280,7 @@ export default function ReadAloud({
     utterance.volume = 1.0;
 
     utterance.onstart = () => {
+      console.log('[ReadAloud] 开始朗读句子:', index, retryCount > 0 ? `(重试 ${retryCount} 次)` : '');
       setCurrentSentenceIndex(index);
       if (onSentenceChange) {
         onSentenceChange(index);
@@ -277,22 +288,48 @@ export default function ReadAloud({
     };
 
     utterance.onend = () => {
+      console.log('[ReadAloud] 句子朗读完成:', index);
       if (!isCancelledRef.current && !isSpeedChangingRef.current) {
         speakSentence(index + 1);
       }
     };
 
     utterance.onerror = (event) => {
-      if (event.error !== 'canceled') {
-        console.error('Speech synthesis error:', event);
+      console.warn('[ReadAloud] 语音合成错误:', event.error, '句子:', index, '重试次数:', retryCount);
+      
+      // 对于 interrupted 错误，尝试重试
+      if (event.error === 'interrupted' && retryCount < 3 && !isCancelledRef.current && !isSpeedChangingRef.current) {
+        console.log('[ReadAloud] 尝试重试朗读句子:', index);
+        // 延迟后重试，避免立即被再次中断
+        setTimeout(() => {
+          speakSentence(index, retryCount + 1);
+        }, 200);
+        return;
       }
+      
+      // 对于 canceled 错误，不需要处理
+      if (event.error === 'canceled') {
+        return;
+      }
+
+      // 其他错误或重试次数用尽，跳到下一句
       if (!isCancelledRef.current && !isSpeedChangingRef.current) {
+        console.log('[ReadAloud] 跳过错误句子，进入下一句:', index);
         speakSentence(index + 1);
       }
     };
 
     utteranceRef.current = utterance;
-    window.speechSynthesis.speak(utterance);
+    
+    // 确保在 speak 之前取消任何正在进行的语音
+    window.speechSynthesis.cancel();
+    
+    // 添加短暂延迟，确保 cancel 完成
+    setTimeout(() => {
+      if (!isCancelledRef.current) {
+        window.speechSynthesis.speak(utterance);
+      }
+    }, 50);
   }, [sentences, onSentenceChange]);
 
   const handlePlay = () => {
