@@ -29,34 +29,54 @@ export function splitIntoSentences(html) {
   let currentSentence = '';
   let i = 0;
   
+  console.log('[splitIntoSentences] 开始分割文本:', {
+    textLength: text.length,
+    textPreview: text.substring(0, 100),
+    textFull: text,
+    timestamp: new Date().toISOString()
+  });
+  
   while (i < text.length) {
     const char = text[i];
+    const charCode = text.charCodeAt(i);
+    const isHighSurrogate = charCode >= 0xD800 && charCode <= 0xDBFF;
+    const isLowSurrogate = charCode >= 0xDC00 && charCode <= 0xDFFF;
+    
     currentSentence += char;
     
     // 检测句末标点或段落分隔符
     const isSentenceEnd = /[。！？.!?\n]/.test(char);
     const isComma = char === '，' || char === ',';
     
-    if (isSentenceEnd) {
-      // 句末标点，结束当前句子
-      if (currentSentence.trim().length > 0) {
-        sentences.push(currentSentence.trim());
+    // 跳过代理对字符的处理
+    if (!isHighSurrogate && !isLowSurrogate) {
+      if (isSentenceEnd || isComma) {
+        const trimmedSentence = currentSentence.trim();
+        console.log('[splitIntoSentences] 分割出句子:', {
+          sentence: trimmedSentence,
+          sentenceLength: trimmedSentence.length,
+          splitBy: isSentenceEnd ? 'sentenceEnd' : 'comma',
+          timestamp: new Date().toISOString()
+        });
+        if (trimmedSentence.length > 0) {
+          sentences.push(trimmedSentence);
+        }
+        currentSentence = '';
       }
-      currentSentence = '';
-    } else if (isComma) {
-      // 逗号，结束当前句子
-      if (currentSentence.trim().length > 0) {
-        sentences.push(currentSentence.trim());
-      }
-      currentSentence = '';
     }
     
     i++;
   }
   
   // 添加最后一个句子
-  if (currentSentence.trim().length > 0) {
-    sentences.push(currentSentence.trim());
+  const lastSentence = currentSentence.trim();
+  console.log('[splitIntoSentences] 最后句子:', {
+    lastSentence,
+    lastSentenceLength: lastSentence.length,
+    timestamp: new Date().toISOString()
+  });
+  if (lastSentence.length > 0) {
+    sentences.push(lastSentence);
   }
 
   // 过滤空句子和太短的句子

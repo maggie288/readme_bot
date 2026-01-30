@@ -517,8 +517,10 @@ function ReadableContent({
       console.log('[ReadableContent] 诊断 - HTML纯文本 vs 句子:', {
         htmlTextLength: htmlText.length,
         htmlTextPreview: htmlText.substring(0, 100),
-        sentence: normalizedSentence.substring(0, 50),
+        htmlTextFull: htmlText,  // 添加完整文本
+        sentence: normalizedSentence,
         sentenceLength: normalizedSentence.length,
+        sentenceFull: normalizedSentence,  // 添加完整句子
         foundInHtml: normalizedHtmlText.includes(normalizedSentence),
         htmlTextContains: normalizedHtmlText.includes(normalizedSentence.substring(0, 20)),
         timestamp: new Date().toISOString()
