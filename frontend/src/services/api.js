@@ -45,6 +45,7 @@ export const documentsAPI = {
   getAll: () => api.get('/documents'),
   getMy: () => api.get('/documents/my'),
   list: (params) => api.get('/documents/my', { params }),
+  searchMy: (query) => api.get('/documents/my/search', { params: { q: query } }),
   getById: (id) => api.get(`/documents/${id}`),
   create: (data) => api.post('/documents', data),
   update: (id, data) => api.put(`/documents/${id}`, data),

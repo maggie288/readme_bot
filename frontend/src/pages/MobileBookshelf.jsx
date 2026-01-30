@@ -13,6 +13,9 @@ export default function MobileBookshelf({ user, onLogout }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showAddMenu, setShowAddMenu] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
 
   useEffect(() => {
     loadDocuments();
@@ -25,13 +28,39 @@ export default function MobileBookshelf({ user, onLogout }) {
         filter: activeTab,
         limit: 50
       });
-      setDocuments(response.data.documents || []);
+      setDocuments(response.data || []);
     } catch (error) {
       console.error('Load documents error:', error);
     } finally {
       setLoading(false);
     }
   };
+
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    try {
+      setIsSearching(true);
+      const response = await documentsAPI.searchMy(searchQuery);
+      setSearchResults(response.data || []);
+    } catch (error) {
+      console.error('Search documents error:', error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const clearSearch = () => {
+    setSearchQuery('');
+    setSearchResults([]);
+  };
+
+  const displayedDocuments = searchQuery.trim() ? searchResults : documents;
 
   const handleLogout = async () => {
     try {
@@ -94,7 +123,6 @@ export default function MobileBookshelf({ user, onLogout }) {
       await bookshelfAPI.remove(docId);
       setDocuments(documents.filter(doc => doc.id !== docId));
       setShowActionMenu(null);
-      alert('已从收藏移除');
     } catch (error) {
       console.error('Remove from favorites error:', error);
       alert('移除失败');
@@ -106,16 +134,95 @@ export default function MobileBookshelf({ user, onLogout }) {
     return date.toLocaleDateString();
   };
 
+  const DocumentCard = ({ doc }) => (
+    <div className="bg-white rounded-xl p-4 shadow-sm">
+      <div className="flex items-start gap-3">
+        <Link
+          to={`/m/document/${doc.id}`}
+          className="flex-1 min-w-0"
+        >
+          <h3 className="font-medium text-gray-900 line-clamp-1">
+            {doc.title || '无标题文档'}
+          </h3>
+          <div className="flex items-center gap-2 mt-2 text-sm text-gray-500">
+            <span>{formatDate(doc.updatedAt)}</span>
+            {doc.wordCount && (
+              <span>{doc.wordCount} 字</span>
+            )}
+            {doc.isPublic !== undefined && (
+              <span className={`px-2 py-0.5 rounded-full text-xs ${
+                doc.isPublic ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-600'
+              }`}>
+                {doc.isPublic ? '公开' : '私密'}
+              </span>
+            )}
+          </div>
+        </Link>
+        <div className="flex items-center gap-2">
+          {doc.price > 0 ? (
+            <span className="px-2 py-1 text-xs bg-yellow-100 text-yellow-700 rounded-full font-medium">
+              ¥{doc.price}
+            </span>
+          ) : (
+            <span className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full">
+              免费
+            </span>
+          )}
+          <button
+            onClick={() => setShowActionMenu(showActionMenu === doc.id ? null : doc.id)}
+            className="p-2 -mr-2 text-gray-400 hover:text-gray-600"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {showActionMenu === doc.id && (
+        <div className="mt-3 pt-3 border-t border-gray-100 flex gap-2">
+          {activeTab === 'my' ? (
+            <>
+              <button
+                onClick={() => navigate(`/m/document/${doc.id}`)}
+                className="flex-1 py-2 bg-blue-50 text-blue-600 rounded-lg text-sm font-medium"
+              >
+                编辑
+              </button>
+              <button
+                onClick={() => {
+                  setShowActionMenu(null);
+                  setShowDeleteConfirm(doc.id);
+                }}
+                className="flex-1 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-medium"
+              >
+                删除
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => handleRemoveFromFavorites(doc.id)}
+              className="flex-1 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-medium"
+            >
+              × 取消收藏
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* 移动端顶部导航栏 */}
       <MobileHeader user={user} onLogout={onLogout} />
 
-      {/* 标签页 */}
       <div className="sticky top-[57px] bg-white z-10 border-b border-gray-100 shadow-sm">
         <div className="flex">
           <button
-            onClick={() => setActiveTab('my')}
+            onClick={() => {
+              setActiveTab('my');
+              clearSearch();
+            }}
             className={`flex-1 py-3 text-sm font-medium ${
               activeTab === 'my' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-gray-500'
             }`}
@@ -123,7 +230,10 @@ export default function MobileBookshelf({ user, onLogout }) {
             我的文档
           </button>
           <button
-            onClick={() => setActiveTab('favorites')}
+            onClick={() => {
+              setActiveTab('favorites');
+              clearSearch();
+            }}
             className={`flex-1 py-3 text-sm font-medium ${
               activeTab === 'favorites' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-gray-500'
             }`}
@@ -133,20 +243,81 @@ export default function MobileBookshelf({ user, onLogout }) {
         </div>
       </div>
 
-      {/* 文档列表 */}
+      <div className="sticky top-[101px] z-10 bg-gray-50 px-4 py-3 border-b border-gray-200">
+        <form onSubmit={handleSearch} className="relative">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="搜索文档..."
+            className="w-full px-4 py-2.5 pl-10 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={clearSearch}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1"
+            >
+              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </form>
+      </div>
+
+      {activeTab === 'my' && !searchQuery.trim() && documents.length > 0 && (
+        <div className="sticky top-[101px] z-10 bg-gray-50 px-4 py-3 border-b border-gray-200">
+          <div className="flex gap-3">
+            <button
+              onClick={() => setShowImportModal(true)}
+              className="flex-1 py-2.5 bg-blue-500 text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+              导入文档
+            </button>
+            <button
+              onClick={handleCreateNew}
+              className="flex-1 py-2.5 bg-green-500 text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              新建文档
+            </button>
+          </div>
+        </div>
+      )}
+
       <main className="px-4 py-4 pb-24">
-        {loading ? (
+        {loading || isSearching ? (
           <div className="flex justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
           </div>
-        ) : documents.length === 0 ? (
+        ) : searchQuery.trim() && displayedDocuments.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="text-gray-400 mb-4">
+              <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <p className="text-gray-500">未找到相关文档</p>
+          </div>
+        ) : displayedDocuments.length === 0 ? (
           <div className="text-center py-12">
             <div className="text-gray-400 mb-4">
               <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
               </svg>
             </div>
-            <p className="text-gray-500">暂无文档</p>
+            <p className="text-gray-500">
+              {activeTab === 'my' ? '暂无文档' : '暂无收藏'}
+            </p>
             {activeTab === 'my' && (
               <div className="flex justify-center gap-3 mt-4">
                 <button
@@ -166,81 +337,29 @@ export default function MobileBookshelf({ user, onLogout }) {
           </div>
         ) : (
           <div className="space-y-3">
-            {documents.map((doc) => (
-              <div
-                key={doc.id}
-                className="bg-white rounded-lg p-4 shadow-sm"
-              >
-                <div className="flex items-start justify-between">
-                  <Link
-                    to={`/m/document/${doc.id}`}
-                    className="flex-1 min-w-0"
-                  >
-                    <h3 className="font-medium text-gray-900 line-clamp-1">
-                      {doc.title || '无标题文档'}
-                    </h3>
-                    <div className="flex items-center gap-3 mt-1 text-sm text-gray-500">
-                      <span>{formatDate(doc.updatedAt)}</span>
-                      {doc.wordCount && (
-                        <span>{doc.wordCount} 字</span>
-                      )}
-                      {doc.isPublic !== undefined && (
-                        <span className={`px-2 py-0.5 rounded-full text-xs ${
-                          doc.isPublic ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-600'
-                        }`}>
-                          {doc.isPublic ? '公开' : '私密'}
-                        </span>
-                      )}
-                    </div>
-                  </Link>
-                  <button
-                    onClick={() => setShowActionMenu(showActionMenu === doc.id ? null : doc.id)}
-                    className="p-2 -mr-2 text-gray-400 hover:text-gray-600"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                    </svg>
-                  </button>
-                </div>
-
-                {/* 操作菜单 */}
-                {showActionMenu === doc.id && (
-                  <div className="mt-3 pt-3 border-t border-gray-100 flex gap-2">
-                    {activeTab === 'my' ? (
-                      <>
-                        <button
-                          onClick={() => navigate(`/m/document/${doc.id}`)}
-                          className="flex-1 py-2 bg-blue-50 text-blue-600 rounded-lg text-sm font-medium"
-                        >
-                          编辑
-                        </button>
-                        <button
-                          onClick={() => setShowDeleteConfirm(doc.id)}
-                          className="flex-1 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-medium"
-                        >
-                          删除
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        onClick={() => handleRemoveFromFavorites(doc.id)}
-                        className="flex-1 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-medium"
-                      >
-                        取消收藏
-                      </button>
-                    )}
-                  </div>
-                )}
+            {searchQuery.trim() && (
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-gray-500">
+                  搜索结果 ({displayedDocuments.length})
+                </span>
+                <button
+                  onClick={clearSearch}
+                  className="text-sm text-blue-500"
+                >
+                  清除搜索
+                </button>
               </div>
+            )}
+            {displayedDocuments.map((doc) => (
+              <DocumentCard key={doc.id} doc={doc} />
             ))}
           </div>
         )}
       </main>
 
-      {/* 删除确认弹窗 */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div 
+          <div
             className="absolute inset-0 bg-black/50"
             onClick={() => setShowDeleteConfirm(null)}
           />
@@ -265,14 +384,12 @@ export default function MobileBookshelf({ user, onLogout }) {
         </div>
       )}
 
-      {/* 导入文档弹窗 */}
       <ImportDocument
         isOpen={showImportModal}
         onClose={() => setShowImportModal(false)}
         onImport={handleImport}
       />
 
-      {/* 底部导航 */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 pb-safe">
         <div className="flex justify-around py-2">
           <Link
@@ -293,45 +410,6 @@ export default function MobileBookshelf({ user, onLogout }) {
             </svg>
             <span className="text-xs mt-1">书架</span>
           </Link>
-          <button
-            onClick={() => setShowAddMenu(!showAddMenu)}
-            className="flex flex-col items-center px-4 py-2 text-gray-500"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            <span className="text-xs mt-1">新增</span>
-          </button>
-
-          {/* 新增菜单 */}
-          {showAddMenu && (
-            <div className="absolute bottom-16 left-1/2 -translate-x-1/2 bg-white rounded-xl shadow-lg border border-gray-200 p-2 z-50 min-w-[140px]">
-              <button
-                onClick={() => {
-                  setShowAddMenu(false);
-                  setShowImportModal(true);
-                }}
-                className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-lg"
-              >
-                <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                </svg>
-                导入文档
-              </button>
-              <button
-                onClick={() => {
-                  setShowAddMenu(false);
-                  handleCreateNew();
-                }}
-                className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-lg"
-              >
-                <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                新建文档
-              </button>
-            </div>
-          )}
           <Link
             to="/m/profile"
             className="flex flex-col items-center px-4 py-2 text-gray-500"

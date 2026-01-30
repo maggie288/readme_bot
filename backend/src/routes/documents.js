@@ -70,6 +70,47 @@ router.get('/my', authenticateToken, async (req, res) => {
   }
 });
 
+// Search user's own documents
+router.get('/my/search', authenticateToken, async (req, res) => {
+  try {
+    const { q } = req.query;
+    
+    if (!q || !q.trim()) {
+      return res.json([]);
+    }
+
+    const documents = await prisma.document.findMany({
+      where: {
+        authorId: req.user.id,
+        OR: [
+          { title: { contains: q.trim(), mode: 'insensitive' } },
+          { content: { contains: q.trim(), mode: 'insensitive' } },
+        ],
+      },
+      include: {
+        author: {
+          select: { id: true, username: true, avatar: true },
+        },
+        _count: {
+          select: { purchases: true },
+        },
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+
+    const result = documents.map((doc) => ({
+      ...doc,
+      isOwner: true,
+      purchaseCount: doc._count.purchases,
+    }));
+
+    res.json(result);
+  } catch (error) {
+    console.error('Search documents error:', error);
+    res.status(500).json({ error: 'Failed to search documents' });
+  }
+});
+
 // Get all documents (public + user's own)
 router.get('/', authenticateToken, async (req, res) => {
   try {

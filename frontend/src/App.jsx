@@ -18,6 +18,7 @@ import ImportDocument from './components/ImportDocument';
 import MobileImportDocument from './components/MobileImportDocument';
 import MobileRechargeHistory from './pages/MobileRechargeHistory';
 import MobilePurchaseHistory from './pages/MobilePurchaseHistory';
+import MobileProfile from './pages/MobileProfile';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -192,7 +193,7 @@ function AppContent() {
         } />
 
         <Route path="/m/profile" element={
-          user ? <MobileHome user={user} onLogout={handleLogout} /> : <Navigate to="/m/login" replace />
+          user ? <MobileProfile user={user} onLogout={handleLogout} /> : <Navigate to="/m/login" replace />
         } />
 
         <Route path="/login" element={
