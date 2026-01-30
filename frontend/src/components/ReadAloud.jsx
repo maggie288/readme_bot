@@ -551,28 +551,29 @@ export default function ReadAloud({
             <span>朗读进度</span>
             <span>{progressPercent}%</span>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+          <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden relative">
             <div
               className="bg-blue-500 h-2 rounded-full transition-all duration-300"
               style={{ width: `${progressPercent}%` }}
             />
+            <input
+              type="range"
+              min="0"
+              max={sentences.length - 1}
+              value={currentSentenceIndex}
+              onChange={(e) => {
+                const newIndex = parseInt(e.target.value);
+                if (isPlaying || isPaused) {
+                  handleJumpToSentence(newIndex);
+                } else {
+                  setCurrentSentenceIndex(newIndex);
+                  onProgressChange?.({ listenPosition: newIndex });
+                }
+              }}
+              className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer z-10"
+              title="拖动调整朗读位置"
+            />
           </div>
-          <input
-            type="range"
-            min="0"
-            max={sentences.length - 1}
-            value={currentSentenceIndex}
-            onChange={(e) => {
-              const newIndex = parseInt(e.target.value);
-              if (isPlaying || isPaused) {
-                handleJumpToSentence(newIndex);
-              } else {
-                setCurrentSentenceIndex(newIndex);
-              }
-            }}
-            className="w-full h-1 bg-transparent cursor-pointer opacity-0 hover:opacity-100 -mt-2 relative z-10"
-            title="拖动调整朗读位置"
-          />
         </div>
       )}
 
