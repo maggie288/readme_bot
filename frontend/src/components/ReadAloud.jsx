@@ -73,7 +73,15 @@ export function splitIntoSentences(html) {
 
   console.log('[splitIntoSentences] 解析结果:', {
     sentenceCount: sentences.length,
-    allSentences: sentences.map(s => ({ text: s, length: s.length })),
+    rawTextLength: text.length,
+    rawTextPreview: text.substring(0, 50),
+    rawTextFull: text,
+    allSentences: sentences.map((s, idx) => ({
+      index: idx,
+      text: s,
+      length: s.length,
+      isTruncated: s.length !== text.length
+    })),
     firstSentences: sentences.slice(0, 3).map(s => s.substring(0, 30)),
     lastSentence: sentences[sentences.length - 1]?.substring(0, 30),
     timestamp: new Date().toISOString()
