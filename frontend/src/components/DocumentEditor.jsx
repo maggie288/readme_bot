@@ -15,7 +15,6 @@ import { TextAlign } from '@tiptap/extension-text-align';
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { splitIntoSentences } from './ReadAloud';
 import DOMPurify from 'dompurify';
-import { uploadAPI } from '../services/api';
 
 // 编辑器工具栏组件 - 可独立使用
 export function EditorToolbar({ editor }) {
@@ -490,13 +489,6 @@ function ReadableContent({
       return '';
     }
 
-    console.log('[ReadableContent] 原始 content:', {
-      contentLength: content.length,
-      contentPreview: content.substring(0, 100),
-      contentFull: content,  // 完整内容
-      timestamp: new Date().toISOString()
-    });
-
     let html = DOMPurify.sanitize(content, {
       ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 's', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
         'ul', 'ol', 'li', 'blockquote', 'pre', 'code', 'a', 'img', 'table', 'thead', 'tbody',
@@ -506,51 +498,9 @@ function ReadableContent({
       ALLOW_DATA_ATTR: true,
     });
 
-    // 详细对比 content 和 html
-    console.log('[ReadableContent] DOMPurify 详细对比:', {
-      contentLength: content.length,
-      htmlLength: html.length,
-      contentCodeUnits: Array.from(content).slice(0, 30).map(c => c.charCodeAt(0)),
-      htmlCodeUnits: Array.from(html).slice(0, 30).map(c => c.charCodeAt(0)),
-      contentHasWenzi: content.includes('蚊子'),
-      htmlHasWenzi: html.includes('蚊子'),
-      contentPreview: content.substring(0, 50),
-      htmlPreview: html.substring(0, 50),
-      timestamp: new Date().toISOString()
-    });
-
-    // 调试：如果 content 和 html 不同，记录差异
-    if (html !== content) {
-      console.log('[ReadableContent] DOMPurify 修改了 content!', {
-        originalContent: content,
-        sanitizedHtml: html,
-        originalLength: content.length,
-        sanitizedLength: html.length,
-        timestamp: new Date().toISOString()
-      });
-    } else {
-      console.log('[ReadableContent] DOMPurify 未修改 content');
-    }
-
     console.log('[ReadableContent] DOMPurify 后:', {
       htmlLength: html.length,
-      htmlPreview: html.substring(0, 100),
-      htmlFull: html,  // 完整 HTML
-      contentChanged: html !== content,
-      contentLengthDiff: html.length - content.length,
-      timestamp: new Date().toISOString()
-    });
-
-    // 提取纯文本用于句子分割
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = html;
-    const htmlText = tempDiv.textContent || tempDiv.innerText || '';
-    
-    console.log('[ReadableContent] HTML 纯文本:', {
-      htmlTextLength: htmlText.length,
-      htmlTextPreview: htmlText.substring(0, 100),
-      htmlTextFull: htmlText,  // 完整纯文本
-      contentTextLength: content.length,
+      hasMarkBefore: html.includes('<mark'),
       timestamp: new Date().toISOString()
     });
 
@@ -566,10 +516,8 @@ function ReadableContent({
       console.log('[ReadableContent] 诊断 - HTML纯文本 vs 句子:', {
         htmlTextLength: htmlText.length,
         htmlTextPreview: htmlText.substring(0, 100),
-        htmlTextFull: htmlText,  // 添加完整文本
-        sentence: normalizedSentence,
+        sentence: normalizedSentence.substring(0, 50),
         sentenceLength: normalizedSentence.length,
-        sentenceFull: normalizedSentence,  // 添加完整句子
         foundInHtml: normalizedHtmlText.includes(normalizedSentence),
         htmlTextContains: normalizedHtmlText.includes(normalizedSentence.substring(0, 20)),
         timestamp: new Date().toISOString()
@@ -648,13 +596,12 @@ function ReadableContent({
       });
 
       html = highlightedHtml;
-    } else if (!isReading && readPositionSentence && readPosition >= 0) {
-      // 高亮上次阅读位置或点击位置
+    } else if (!isReading && readPositionSentence && readPosition > 0) {
+      // 高亮上次阅读位置
       const escapedSentence = readPositionSentence.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const regex = new RegExp(`(${escapedSentence})`, 'g');
       html = html.replace(regex, '<mark class="sentence-highlight bg-blue-100 text-gray-900 rounded px-0.5">$1</mark>');
       console.log('[ReadableContent] 高亮处理 (readPosition):', {
-        readPosition,
         readPositionSentence: readPositionSentence.substring(0, 30),
         timestamp: new Date().toISOString()
       });
@@ -883,40 +830,6 @@ export default function DocumentEditor({
         onChange(editor.getHTML());
       }
     },
-    editorProps: {
-      handlePaste: (view, event, slice) => {
-        const items = event.clipboardData?.items;
-        if (!items) return false;
-
-        for (let i = 0; i < items.length; i++) {
-          const item = items[i];
-          if (item.type.indexOf('image') === 0) {
-            event.preventDefault();
-            const file = item.getAsFile();
-            if (file) {
-              uploadAPI.uploadImage(file)
-                .then(response => {
-                  if (response.data.url) {
-                    const { schema } = view.state;
-                    const coordinates = view.posAtCoords({ left: event.clientX, top: event.clientY });
-                    if (coordinates) {
-                      const node = schema.nodes.image.create({ src: response.data.url });
-                      const transaction = schema.tr.replaceWith(coordinates.pos, coordinates.pos, node);
-                      view.dispatch(transaction);
-                    }
-                  }
-                })
-                .catch(error => {
-                  console.error('Upload image error:', error);
-                  alert('图片上传失败，请重试');
-                });
-            }
-            return true;
-          }
-        }
-        return false;
-      },
-    },
   });
 
   useEffect(() => {
@@ -962,7 +875,7 @@ export default function DocumentEditor({
   }
 
   // 如果不是编辑模式，显示可朗读视图（支持点击句子跳转）
-  const showReadableView = !editable;
+  const showReadableView = !editable || isReading;
 
   console.log('[DocumentEditor] 渲染判断:', {
     editable,

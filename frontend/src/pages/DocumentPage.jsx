@@ -113,6 +113,14 @@ export default function DocumentPage() {
     }
   }, [document]);
 
+  // 进入编辑模式时重置朗读状态
+  useEffect(() => {
+    if (isEditing) {
+      setIsReading(false);
+      setCurrentSentenceIndex(-1);
+    }
+  }, [isEditing]);
+
   // 检查翻译购买状态
   useEffect(() => {
     if (document?.sourceType === 'twitter') {
