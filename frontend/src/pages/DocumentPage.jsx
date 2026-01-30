@@ -19,7 +19,7 @@ export default function DocumentPage() {
   const [isInBookshelf, setIsInBookshelf] = useState(false);
   const [purchasing, setPurchasing] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const [user, setUser] = useState({});
 
   // 翻译相关状态
   const [contentTab, setContentTab] = useState('original'); // 'original' | 'translation'
@@ -38,7 +38,18 @@ export default function DocumentPage() {
   const [jumpToSentence, setJumpToSentence] = useState(null);
 
   // 阅读进度状态
-  const [readingProgress, setReadingProgress] = useState(null);
+  const [userProgress, setUserProgress] = useState(null);
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (e) {
+        console.error('Failed to parse user:', e);
+      }
+    }
+  }, []);
   const progressSaveTimerRef = useRef(null);
 
   // 自动保存相关状态
