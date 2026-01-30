@@ -352,8 +352,14 @@ export default function DocumentPage() {
 
   // 处理点击句子（从该句子开始朗读）
   const handleSentenceClick = useCallback((index) => {
+    console.log('[DocumentPage] handleSentenceClick 被调用:', { index, timestamp: new Date().toISOString() });
     setStartFromSentence(index);
     setCurrentSentenceIndex(index);
+    // 更新阅读进度，以便点击位置高亮
+    setReadingProgress(prev => ({
+      ...prev,
+      listenPosition: index
+    }));
   }, []);
 
   const isOwner = document?.author?.id === user?.id;
