@@ -23,41 +23,56 @@ export function splitIntoSentences(html) {
     return [];
   }
 
-  // 按中英文句号、问号、感叹号、分号分割，保留分隔符
-  // 添加更多分隔符：分号、冒号、换行（段落分割）
-  let sentences = text
-    .split(/(?<=[。！？.!?;；:：\n])\s*/g)
-    .map(s => s.trim())
-    .filter(s => s.length > 0);
-
-  // 如果分割结果太少（少于3个句子），可能是纯英文或特殊格式
-  // 尝试用换行符再次分割
-  if (sentences.length < 3) {
-    const lines = text.split(/\n+/g).map(s => s.trim()).filter(s => s.length > 0);
-    if (lines.length > sentences.length) {
-      sentences = lines;
+  // 按中英文句号、问号、感叹号、分号、逗号分割
+  // 使用更精确的分割逻辑：找到分割符，然后取分割符前面的部分
+  let sentences = [];
+  let currentSentence = '';
+  let i = 0;
+  
+  while (i < text.length) {
+    const char = text[i];
+    currentSentence += char;
+    
+    // 检测句末标点或段落分隔符
+    const isSentenceEnd = /[。！？.!?\n]/.test(char);
+    const isComma = char === '，' || char === ',';
+    
+    if (isSentenceEnd) {
+      // 句末标点，结束当前句子
+      if (currentSentence.trim().length > 0) {
+        sentences.push(currentSentence.trim());
+      }
+      currentSentence = '';
+    } else if (isComma) {
+      // 逗号，结束当前句子
+      if (currentSentence.trim().length > 0) {
+        sentences.push(currentSentence.trim());
+      }
+      currentSentence = '';
     }
+    
+    i++;
+  }
+  
+  // 添加最后一个句子
+  if (currentSentence.trim().length > 0) {
+    sentences.push(currentSentence.trim());
   }
 
-  // 如果还是没有句子，返回整个文本作为一个句子
-  if (sentences.length === 0) {
-    sentences = [text];
-  }
-
-  // 后处理：确保每个句子都有内容，过滤掉太短的片段
-  // 同时保留原始句子的完整性
+  // 过滤空句子和太短的句子
   sentences = sentences.filter(s => {
-    const cleaned = s.replace(/[\s，。！？.!?;；:：]+/g, '').trim();
-    return cleaned.length > 5; // 至少5个字符
+    const cleaned = s.replace(/[，。！？.!?;；:：,]+/g, '').trim();
+    return cleaned.length > 2;
   });
 
   // 如果过滤后没有句子，返回原始文本
   if (sentences.length === 0) {
-    return [text];
+    sentences = [text];
   }
 
   console.log('[splitIntoSentences] 解析结果:', {
     sentenceCount: sentences.length,
+    allSentences: sentences.map(s => ({ text: s.substring(0, 40), length: s.length })),
     firstSentences: sentences.slice(0, 3).map(s => s.substring(0, 30)),
     lastSentence: sentences[sentences.length - 1]?.substring(0, 30),
     timestamp: new Date().toISOString()
