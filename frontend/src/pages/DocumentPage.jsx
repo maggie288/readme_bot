@@ -356,10 +356,14 @@ export default function DocumentPage() {
     setStartFromSentence(index);
     setCurrentSentenceIndex(index);
     // 更新阅读进度，以便点击位置高亮
-    setReadingProgress(prev => ({
-      ...prev,
-      listenPosition: index
-    }));
+    setReadingProgress(prev => {
+      const newProgress = {
+        ...(prev || {}),
+        listenPosition: index
+      };
+      console.log('[DocumentPage] 更新 readingProgress:', { prev, newProgress, timestamp: new Date().toISOString() });
+      return newProgress;
+    });
   }, []);
 
   const isOwner = document?.author?.id === user?.id;
